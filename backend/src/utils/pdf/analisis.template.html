@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Certificado de Análisis</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        color: #1f1f1f;
+        margin: 0;
+        padding: 0;
+      }
+
+      .page {
+        padding: 36px 48px;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+      }
+
+      .title {
+        font-size: 18px;
+        font-weight: 700;
+      }
+
+      .meta {
+        margin-top: 8px;
+        font-size: 12px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 18px;
+      }
+
+      th,
+      td {
+        border: 1px solid #000;
+        padding: 8px;
+        font-size: 12px;
+      }
+
+      th {
+        background: #f3f3f3;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="header">
+        <div>
+          <div class="title">{{ASUNTO}}</div>
+          <div class="meta">{{CIUDAD_FECHA}}</div>
+        </div>
+        <img src="{{LOGO_URL}}" alt="Logo Invergrasas" style="max-width: 120px" />
+      </div>
+
+      <p>Señores: <strong>{{EMPRESA_CLIENTE}}</strong></p>
+      <p>NIT: {{NIT_CLIENTE}}</p>
+      <p>Lote: {{LOTE}}</p>
+    </div>
+  </body>
+</html>

@@ -8,7 +8,15 @@ describe('AuthService (unit with DB)', () => {
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
-      imports: [TypeOrmModule.forRoot({ type: 'sqlite', database: ':memory:', entities: [User], synchronize: true }), TypeOrmModule.forFeature([User])],
+      imports: [
+        TypeOrmModule.forRoot({
+          type: 'sqlite',
+          database: ':memory:',
+          entities: [User],
+          synchronize: true,
+        }),
+        TypeOrmModule.forFeature([User]),
+      ],
       providers: [AuthService],
     }).compile();
 
@@ -16,13 +24,25 @@ describe('AuthService (unit with DB)', () => {
   });
 
   it('registers a user and returns public profile', async () => {
-    const res = await authService.register('Test', 't@example.com', 'password123', 'empleado');
+    const res = await authService.register(
+      'Test',
+      't@example.com',
+      'password123',
+      'empleado',
+    );
     expect(res).toHaveProperty('id');
     expect(res.email).toBe('t@example.com');
   });
 
   it('throws on duplicate email', async () => {
-    await authService.register('A', 'dup@example.com', 'password123', 'empleado');
-    await expect(authService.register('B', 'dup@example.com', 'password456', 'empleado')).rejects.toThrow('EMAIL_EXISTS');
+    await authService.register(
+      'A',
+      'dup@example.com',
+      'password123',
+      'empleado',
+    );
+    await expect(
+      authService.register('B', 'dup@example.com', 'password456', 'empleado'),
+    ).rejects.toThrow('EMAIL_EXISTS');
   });
 });

@@ -29,7 +29,12 @@ describe('Empresas list E2E', () => {
     const empresaRepo = AppDataSource.getRepository(Empresa);
     const ueRepo = AppDataSource.getRepository(UserEmpresa);
 
-    const user = userRepo.create({ nombre: 'U1', email: 'u1@example.com', password: 'x', rol: 'empleado' } as any);
+    const user = userRepo.create({
+      nombre: 'U1',
+      email: 'u1@example.com',
+      password: 'x',
+      rol: 'empleado',
+    } as any);
     await userRepo.save(user);
 
     const e1 = empresaRepo.create({ razon_social: 'A', nit: 'n1' } as any);
@@ -40,9 +45,15 @@ describe('Empresas list E2E', () => {
     await ueRepo.save({ user_id: user.id, empresa_id: e1.id } as any);
     await ueRepo.save({ user_id: user.id, empresa_id: e2.id } as any);
 
-    const token = jwt.sign({ sub: user.id, email: user.email, nombre: user.nombre, rol: user.rol }, JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign(
+      { sub: user.id, email: user.email, nombre: user.nombre, rol: user.rol },
+      JWT_SECRET,
+      { expiresIn: '1h' },
+    );
 
-    const res = await request(app).get('/api/empresas').set('Authorization', `Bearer ${token}`);
+    const res = await request(app)
+      .get('/api/empresas')
+      .set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
     expect(res.body.length).toBe(2);
@@ -52,10 +63,21 @@ describe('Empresas list E2E', () => {
 
   it('returns empty array for user with no empresas', async () => {
     const userRepo = AppDataSource.getRepository(User);
-    const user = userRepo.create({ nombre: 'U2', email: 'u2@example.com', password: 'x', rol: 'empleado' } as any);
+    const user = userRepo.create({
+      nombre: 'U2',
+      email: 'u2@example.com',
+      password: 'x',
+      rol: 'empleado',
+    } as any);
     await userRepo.save(user);
-    const token = jwt.sign({ sub: user.id, email: user.email, nombre: user.nombre, rol: user.rol }, JWT_SECRET, { expiresIn: '1h' });
-    const res = await request(app).get('/api/empresas').set('Authorization', `Bearer ${token}`);
+    const token = jwt.sign(
+      { sub: user.id, email: user.email, nombre: user.nombre, rol: user.rol },
+      JWT_SECRET,
+      { expiresIn: '1h' },
+    );
+    const res = await request(app)
+      .get('/api/empresas')
+      .set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(200);
     expect(res.body).toEqual([]);
   });

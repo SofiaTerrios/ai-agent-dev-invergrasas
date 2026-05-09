@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String        @id @default(uuid())
+  nombre     String
+  email      String        @unique
+  password   String
+  rol        String
+  created_at DateTime      @default(now())
+  empresas   UserEmpresa[]
+  pedidos    Pedido[]      @relation("PedidosCreados")
+
+  @@map("users")
+}
+
+model Empresa {
+  id         String        @id @default(uuid())
+  razon_social String
+  nit        String        @unique
+  direccion  String?
+  telefono   String?
+  correo     String?
+  created_at DateTime      @default(now())
+  users      UserEmpresa[]
+  clientes   Cliente[]
+  pedidos    Pedido[]
+
+  @@map("empresas")
+}
+
+model UserEmpresa {
+  id         String   @id @default(uuid())
+  user_id    String
+  empresa_id String
+  created_at DateTime @default(now())
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  empresa    Empresa  @relation(fields: [empresa_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, empresa_id])
+  @@index([user_id])
+  @@index([empresa_id])
+  @@map("user_empresas")
+}
+
+model Cliente {
+  id         String   @id @default(uuid())
+  nombre     String
+  contacto   String
+  telefono   String
+  correo     String
+  empresa_id String
+  created_at DateTime @default(now())
+  empresa    Empresa  @relation(fields: [empresa_id], references: [id], onDelete: Cascade)
+  pedidos    Pedido[]
+
+  @@index([empresa_id])
+  @@map("clientes")
+}
+
+model Pedido {
+  id           String      @id @default(uuid())
+  empresa_id   String
+  cliente_id   String
+  creado_por   String
+  producto     String
+  tipo_empaque String
+  cantidad_kg  Decimal     @db.Decimal(10, 2)
+  fecha        DateTime
+  created_at   DateTime    @default(now())
+  empresa      Empresa     @relation(fields: [empresa_id], references: [id], onDelete: Cascade)
+  cliente      Cliente     @relation(fields: [cliente_id], references: [id], onDelete: Cascade)
+  usuario      User        @relation("PedidosCreados", fields: [creado_por], references: [id], onDelete: Cascade)
+
+  @@index([empresa_id])
+  @@index([cliente_id])
+  @@index([creado_por])
+  @@map("pedidos")
+}
+
+enum CertificadoTipo {
+  oleina
+  rbd
+}
+
+model CertificadoAnalisis {
+  id                String             @id @default(uuid())
+  tipo              CertificadoTipo
+  empresa_cliente   String
+  nit_cliente       String?
+  lote              String
+  peso_kg           Decimal?           @db.Decimal(10, 2)
+  fecha_emision     DateTime           @default(now())
+  fecha_vencimiento DateTime
+  firmado_por       String             @default("ADRIANA RODRIGUEZ URREA")
+  archivo_url       String?
+  created_at        DateTime           @default(now())
+  parametros        ParametroAnalisis[]
+
+  @@map("certificados_analisis")
+}
+
+model ParametroAnalisis {
+  id             String              @id @default(uuid())
+  certificado_id String
+  nombre         String
+  valor          String
+  orden          Int
+  certificado    CertificadoAnalisis @relation(fields: [certificado_id], references: [id], onDelete: Cascade)
+
+  @@index([certificado_id])
+  @@map("parametros_analisis")
+}

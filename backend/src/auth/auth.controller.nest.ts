@@ -9,14 +9,19 @@ export class AuthControllerNest {
 
   @Post('register')
   async register(@Body() dto: RegisterUserDto) {
-    return this.authService.register(dto.nombre, dto.email, dto.password, dto.rol as any);
+    return this.authService.register(
+      dto.nombre,
+      dto.email,
+      dto.password,
+      dto.rol,
+    );
   }
 
   @Post('login')
   async login(@Body() dto: LoginUserDto) {
     const user = await this.authService.validateUser(dto.email, dto.password);
     if (!user) return { status: 401 };
-    return this.authService.login(user as any);
+    return this.authService.login(user);
   }
 
   @Get('profile')

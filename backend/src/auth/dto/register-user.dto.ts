@@ -1,5 +1,12 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength, IsIn, IsOptional } from 'class-validator';
-import type { Role } from '../../users/entities/user.entity';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  MinLength,
+  IsIn,
+  IsOptional,
+} from 'class-validator';
+import { Role } from '../../graphql/enums';
 
 export class RegisterUserDto {
   @IsNotEmpty()
@@ -17,5 +24,5 @@ export class RegisterUserDto {
 
   @IsOptional()
   @IsIn(['admin', 'empleado'])
-  rol?: Role = 'empleado';
+  rol?: Role = Role.empleado;
 }

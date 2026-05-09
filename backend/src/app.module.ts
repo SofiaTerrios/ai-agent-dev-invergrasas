@@ -1,10 +1,15 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
+import { ConfigModule } from '@nestjs/config';
+import { GraphQLModule } from '@nestjs/graphql';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { EmpresasModule } from './empresas/empresas.module';
+import { ClientesModule } from './clientes/clientes.module';
+import { PedidosModule } from './pedidos/pedidos.module';
+import { PrismaModule } from './prisma/prisma.module';
+import { CertificadosModule } from './certificados/certificados.module';
 
 @Module({
   imports: [
@@ -12,33 +17,19 @@ import { EmpresasModule } from './empresas/empresas.module';
       isGlobal: true,
       envFilePath: '.env',
     }),
-    TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => {
-        const db = configService.get<string>('DB_DATABASE');
-        if (process.env.NODE_ENV === 'test' || !db) {
-          return ({
-            type: 'sqlite',
-            database: ':memory:',
-            entities: [__dirname + '/**/*.entity{.ts,.js}'],
-            synchronize: true,
-          });
-        }
-        return ({
-          type: 'postgres',
-          host: configService.get<string>('DB_HOST'),
-          port: configService.get<number>('DB_PORT'),
-          username: configService.get<string>('DB_USERNAME'),
-          password: configService.get<string>('DB_PASSWORD'),
-          database: db,
-          autoLoadEntities: true,
-          synchronize: true, // Note: synchronize: true is not recommended for production
-        });
-      },
-      inject: [ConfigService],
+    GraphQLModule.forRoot<ApolloDriverConfig>({
+      driver: ApolloDriver,
+      autoSchemaFile: true,
+      sortSchema: true,
+      context: ({ req, res }) => ({ req, res }),
     }),
+    PrismaModule,
     AuthModule,
-    EmpresasModule],
+    EmpresasModule,
+    ClientesModule,
+    PedidosModule,
+    CertificadosModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

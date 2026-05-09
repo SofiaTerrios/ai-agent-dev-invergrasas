@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@apollo/client": "^4.1.9"
+  }
+}

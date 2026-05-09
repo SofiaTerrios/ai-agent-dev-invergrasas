@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index, ManyToMany, JoinTable } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  Index,
+  ManyToMany,
+  JoinTable,
+} from 'typeorm';
 import { Empresa } from '../../empresas/entities/empresa.entity';
 
 export type Role = 'admin' | 'empleado';
@@ -21,7 +29,9 @@ export class User {
   @Column({ type: 'text' })
   rol!: Role;
 
-  @CreateDateColumn({ type: 'timestamp' })
+  @CreateDateColumn({
+    type: process.env.NODE_ENV === 'test' ? 'datetime' : 'timestamp',
+  })
   created_at!: Date;
 
   @ManyToMany(() => Empresa, (empresa) => empresa.users)

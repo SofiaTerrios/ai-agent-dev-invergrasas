@@ -21,23 +21,34 @@ describe('Auth E2E', () => {
   });
 
   it('registers and logs in successfully', async () => {
-    const user = { nombre: 'Test', email: 'test@example.com', password: 'secret', rol: 'empleado' };
+    const user = {
+      nombre: 'Test',
+      email: 'test@example.com',
+      password: 'secret',
+      rol: 'empleado',
+    };
     const res = await request(app).post('/api/auth/register').send(user);
     expect(res.status).toBe(201);
 
-    const login = await request(app).post('/api/auth/login').send({ email: user.email, password: user.password });
+    const login = await request(app)
+      .post('/api/auth/login')
+      .send({ email: user.email, password: user.password });
     expect(login.status).toBe(200);
     expect(login.body).toHaveProperty('access_token');
     expect(login.body).toHaveProperty('user');
   });
 
   it('returns 401 for wrong password', async () => {
-    const login = await request(app).post('/api/auth/login').send({ email: 'test@example.com', password: 'wrong' });
+    const login = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'test@example.com', password: 'wrong' });
     expect(login.status).toBe(401);
   });
 
   it('returns 401 for non-existent email', async () => {
-    const login = await request(app).post('/api/auth/login').send({ email: 'noone@example.com', password: 'whatever' });
+    const login = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'noone@example.com', password: 'whatever' });
     expect(login.status).toBe(401);
   });
 });

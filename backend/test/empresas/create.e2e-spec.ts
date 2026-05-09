@@ -23,25 +23,39 @@ describe('Empresas E2E', () => {
 
   it('creates empresa when authenticated', async () => {
     // register and login
-    await request(app).post('/api/auth/register').send({ nombre: 'E', email: 'e@e.com', password: 'password' });
-    const login = await request(app).post('/api/auth/login').send({ email: 'e@e.com', password: 'password' });
+    await request(app)
+      .post('/api/auth/register')
+      .send({ nombre: 'E', email: 'e@e.com', password: 'password' });
+    const login = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'e@e.com', password: 'password' });
     expect(login.status).toBe(200);
     const token = login.body.access_token || login.body.token;
-    const res = await request(app).post('/api/empresas').set('Authorization', `Bearer ${token}`).send({ razon_social: 'R', nit: 'NIT1', correo: 'c@c.com' });
+    const res = await request(app)
+      .post('/api/empresas')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ razon_social: 'R', nit: 'NIT1', correo: 'c@c.com' });
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty('id');
   });
 
   it('rejects duplicate NIT', async () => {
     // ensure existing
-    const login = await request(app).post('/api/auth/login').send({ email: 'e@e.com', password: 'password' });
+    const login = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'e@e.com', password: 'password' });
     const token = login.body.access_token || login.body.token;
-    const res = await request(app).post('/api/empresas').set('Authorization', `Bearer ${token}`).send({ razon_social: 'R2', nit: 'NIT1', correo: 'c@c.com' });
+    const res = await request(app)
+      .post('/api/empresas')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ razon_social: 'R2', nit: 'NIT1', correo: 'c@c.com' });
     expect(res.status).toBe(409);
   });
 
   it('unauthenticated returns 401', async () => {
-    const res = await request(app).post('/api/empresas').send({ razon_social: 'R3', nit: 'NIT3' });
+    const res = await request(app)
+      .post('/api/empresas')
+      .send({ razon_social: 'R3', nit: 'NIT3' });
     expect(res.status).toBe(401);
   });
 });

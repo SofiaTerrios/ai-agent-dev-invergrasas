@@ -1,40 +1,78 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
-import { Empresa } from './entities/empresa.entity';
-import { UserEmpresa } from './entities/user-empresa.entity';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateEmpresaDto } from './dto/create-empresa.dto';
+import { UpdateEmpresaDto } from './dto/update-empresa.dto';
 
 @Injectable()
 export class EmpresasService {
-  constructor(
-    @InjectRepository(Empresa) private repo: Repository<Empresa>,
-    @InjectRepository(UserEmpresa) private userEmpresaRepo: Repository<UserEmpresa>,
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
-  async create(data: Partial<Empresa>) {
-    const exists = await this.repo.findOne({ where: { nit: data.nit } });
-    if (exists) throw new Error('NIT_EXISTS');
-    const ent = this.repo.create(data as any);
-    const saved = await this.repo.save(ent);
-    return saved;
+  async create(data: CreateEmpresaDto) {
+    const exists = await this.prisma.empresa.findUnique({
+      where: { nit: data.nit },
+    });
+    if (exists) throw new ConflictException('NIT_EXISTS');
+    return this.prisma.empresa.create({ data });
   }
 
-  async update(id: string, data: Partial<Empresa>) {
-    const existing = await this.repo.findOne({ where: { id } });
-    if (!existing) throw new Error('NOT_FOUND');
+  async update(id: string, data: UpdateEmpresaDto) {
+    const existing = await this.prisma.empresa.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('NOT_FOUND');
     if (data.nit && data.nit !== existing.nit) {
-      const conflict = await this.repo.findOne({ where: { nit: data.nit } });
-      if (conflict) throw new Error('NIT_EXISTS');
+      const conflict = await this.prisma.empresa.findUnique({
+        where: { nit: data.nit },
+      });
+      if (conflict) throw new ConflictException('NIT_EXISTS');
     }
-    const merged = this.repo.merge(existing, data as any);
-    const saved = await this.repo.save(merged);
-    return saved;
+    return this.prisma.empresa.update({ where: { id }, data });
   }
 
   async findAllForUser(userId: string) {
-    const links = await this.userEmpresaRepo.find({ where: { user_id: userId } });
+    const links = await this.prisma.userEmpresa.findMany({
+      where: { user_id: userId },
+      include: { empresa: true },
+    });
     if (!links || links.length === 0) return [];
-    const ids = links.map((l) => l.empresa_id);
-    return this.repo.find({ where: { id: In(ids) } });
+    return links.map((link) => link.empresa);
+  }
+
+  async findAll() {
+    return this.prisma.empresa.findMany({
+      orderBy: { created_at: 'desc' },
+    });
+  }
+
+  async associateUserToEmpresa(empresaId: string, userId: string) {
+    const userExists = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!userExists) throw new NotFoundException('User not found');
+
+    const empresaExists = await this.prisma.empresa.findUnique({
+      where: { id: empresaId },
+    });
+    if (!empresaExists) throw new NotFoundException('Empresa not found');
+
+    const existingLink = await this.prisma.userEmpresa.findUnique({
+      where: { user_id_empresa_id: { user_id: userId, empresa_id: empresaId } },
+    });
+
+    if (existingLink) {
+      // Prevents duplicate associations (silently ignore or return success)
+      return { message: 'Already associated' };
+    }
+
+    await this.prisma.userEmpresa.create({
+      data: {
+        user_id: userId,
+        empresa_id: empresaId,
+      },
+    });
+
+    return { message: 'Association created successfully' };
   }
 }
