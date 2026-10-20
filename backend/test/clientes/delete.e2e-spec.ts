@@ -62,11 +62,14 @@ describe('Clientes E2E - Delete (soft delete)', () => {
     const res = await gql(
       app,
       token,
-      `query($empresaId: ID!) { clientesByEmpresa(empresaId: $empresaId) { id } }`,
+      `query($empresaId: ID!) { clientesByEmpresa(empresaId: $empresaId) { edges { node { id } } totalCount } }`,
       { empresaId },
     );
     expect(res.body.errors).toBeUndefined();
-    expect(res.body.data.clientesByEmpresa).toEqual([]);
+    expect(res.body.data.clientesByEmpresa).toEqual({
+      edges: [],
+      totalCount: 0,
+    });
   });
 
   it('returns 404 when deleting an already deleted cliente', async () => {

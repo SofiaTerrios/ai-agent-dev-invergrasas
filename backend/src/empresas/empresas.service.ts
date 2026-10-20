@@ -3,7 +3,10 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { paginate, PaginationArgs } from '../common/pagination';
+import { accessibleEmpresaIds } from './empresa-access';
 import { CreateEmpresaDto } from './dto/create-empresa.dto';
 import { UpdateEmpresaDto } from './dto/update-empresa.dto';
 
@@ -32,19 +35,23 @@ export class EmpresasService {
     return this.prisma.empresa.update({ where: { id }, data });
   }
 
-  async findAllForUser(userId: string) {
-    const links = await this.prisma.userEmpresa.findMany({
-      where: { user_id: userId, empresa: { deleted_at: null } },
-      include: { empresa: true },
-    });
-    if (!links || links.length === 0) return [];
-    return links.map((link) => link.empresa);
-  }
+  // Admins get every empresa, other users only the ones they are linked to.
+  async list(actor: { id: string; rol?: string }, pagination?: PaginationArgs) {
+    const empresaIds = await accessibleEmpresaIds(this.prisma, actor);
+    const where: Prisma.EmpresaWhereInput = empresaIds
+      ? { id: { in: empresaIds } }
+      : {};
 
-  async findAll() {
-    return this.prisma.empresa.findMany({
-      orderBy: { created_at: 'desc' },
-    });
+    return paginate(
+      pagination,
+      (page) =>
+        this.prisma.empresa.findMany({
+          where,
+          orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+          ...page,
+        }),
+      () => this.prisma.empresa.count({ where }),
+    );
   }
 
   async associateUserToEmpresa(empresaId: string, userId: string) {

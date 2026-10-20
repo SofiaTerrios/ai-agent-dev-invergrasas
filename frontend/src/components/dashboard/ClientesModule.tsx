@@ -7,7 +7,13 @@ import EditClienteModal from "./modals/EditClienteModal";
 import ClientesTable from "./ClientesTable";
 import ClientesCards from "./ClientesCards";
 import Button from "@/components/ui/Button";
-import { graphqlRequest } from "@/lib/graphql";
+import {
+  connectionNodes,
+  graphqlRequest,
+  PAGE_SIZE,
+  type Connection,
+  type PageInfo,
+} from "@/lib/graphql";
 import {
   GET_CLIENTES_QUERY,
   DELETE_CLIENTE_MUTATION,
@@ -18,6 +24,9 @@ import { getSession } from "@/lib/session";
 export default function ClientesModule() {
   const router = useRouter();
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [pageInfo, setPageInfo] = useState<PageInfo>({ endCursor: null, hasNextPage: false });
+  const [totalCount, setTotalCount] = useState(0);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -40,22 +49,27 @@ export default function ClientesModule() {
   }, [session, isAdmin, router]);
 
   // Load clientes
-  const loadClientes = useCallback(async () => {
+  // Loads the first page, or appends the next one when `after` is given
+  const loadClientes = useCallback(async (after?: string) => {
     if (!token) {
       setError("Token no disponible. Por favor, inicia sesión nuevamente.");
       setIsLoading(false);
       return;
     }
 
-    setIsLoading(true);
+    if (after) setIsLoadingMore(true);
+    else setIsLoading(true);
     setError("");
     try {
-      const data = await graphqlRequest<{ clientes: Cliente[] }>(
+      const data = await graphqlRequest<{ clientes: Connection<Cliente> }>(
         GET_CLIENTES_QUERY,
-        undefined,
+        { first: PAGE_SIZE, after },
         token
       );
-      setClientes(data.clientes || []);
+      const page = connectionNodes(data.clientes);
+      setClientes((prev) => (after ? [...prev, ...page] : page));
+      setPageInfo(data.clientes.pageInfo);
+      setTotalCount(data.clientes.totalCount);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Error al cargar clientes";
       console.error("Error loading clientes:", errorMessage);
@@ -68,6 +82,7 @@ export default function ClientesModule() {
       }
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
   }, [token, router]);
 
@@ -129,6 +144,7 @@ export default function ClientesModule() {
         token
       );
       setClientes((prev) => prev.filter((c) => c.id !== deleteConfirm.id));
+      setTotalCount((prev) => Math.max(0, prev - 1));
       setDeleteConfirm(null);
     } catch (error) {
       console.error("Error deleting cliente:", error);
@@ -167,7 +183,7 @@ export default function ClientesModule() {
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#7D8E86]">
               Total de Clientes
             </p>
-            <p className="mt-3 text-3xl font-black text-[#17251F]">{clientes.length}</p>
+            <p className="mt-3 text-3xl font-black text-[#17251F]">{totalCount}</p>
           </article>
 
           <article className="rounded-lg border border-[#DDE8E2] bg-white p-4 shadow-sm">
@@ -175,7 +191,7 @@ export default function ClientesModule() {
               Activos
             </p>
             <p className="mt-3 text-3xl font-black text-[#0F6E2E]">
-              {clientes.length}
+              {totalCount}
             </p>
           </article>
 
@@ -221,6 +237,18 @@ export default function ClientesModule() {
             onDelete={handleDelete}
             isLoading={isLoading}
           />
+          {pageInfo.hasNextPage && !isLoading && (
+            <div className="flex justify-center">
+              <Button
+                variant="secondary"
+                onClick={() => loadClientes(pageInfo.endCursor ?? undefined)}
+                isLoading={isLoadingMore}
+                className="w-auto px-8"
+              >
+                Cargar más ({clientes.length} de {totalCount})
+              </Button>
+            </div>
+          )}
         </>
       )}
 

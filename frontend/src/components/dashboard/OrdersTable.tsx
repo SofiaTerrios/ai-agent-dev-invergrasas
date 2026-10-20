@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import FiltersPanel, { type OrdersFilters } from "./FiltersPanel";
 import {
   Table,
@@ -10,7 +10,14 @@ import {
   TableHeaderCell,
   TableRow,
 } from "../ui/Table";
-import { graphqlRequest } from "@/lib/graphql";
+import Button from "../ui/Button";
+import {
+  connectionNodes,
+  graphqlRequest,
+  PAGE_SIZE,
+  type Connection,
+  type PageInfo,
+} from "@/lib/graphql";
 import { getSession } from "@/lib/session";
 
 type OrderItem = {
@@ -67,18 +74,27 @@ const MOCK_ORDERS: OrderItem[] = [
 ];
 
 const ORDERS_QUERY = `
-  query Pedidos($filters: PedidoFiltersInput) {
-    pedidos(filters: $filters) {
-      id
-      empresa_id
-      cliente_id
-      producto
-      tipo_empaque
-      cantidad_kg
-      fecha
-      cliente {
-        nombre
+  query Pedidos($filters: PedidoFiltersInput, $first: Int, $after: String) {
+    pedidos(filters: $filters, first: $first, after: $after) {
+      edges {
+        node {
+          id
+          empresa_id
+          cliente_id
+          producto
+          tipo_empaque
+          cantidad_kg
+          fecha
+          cliente {
+            nombre
+          }
+        }
       }
+      pageInfo {
+        endCursor
+        hasNextPage
+      }
+      totalCount
     }
   }
 `;
@@ -118,6 +134,28 @@ export default function OrdersTable() {
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [source, setSource] = useState<"api" | "mock">("mock");
   const [loading, setLoading] = useState(true);
+  const [pageInfo, setPageInfo] = useState<PageInfo>({ endCursor: null, hasNextPage: false });
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const apiFilters = useMemo(
+    () => ({
+      ...(filters.fecha_inicio ? { fecha_inicio: filters.fecha_inicio } : {}),
+      ...(filters.fecha_fin ? { fecha_fin: filters.fecha_fin } : {}),
+      ...(filters.cliente_id ? { cliente_id: filters.cliente_id } : {}),
+      ...(filters.producto ? { producto: filters.producto } : {}),
+    }),
+    [filters.fecha_inicio, filters.fecha_fin, filters.cliente_id, filters.producto],
+  );
+
+  const fetchOrders = useCallback(
+    (after?: string | null) =>
+      graphqlRequest<{ pedidos: Connection<OrderItem> }>(
+        ORDERS_QUERY,
+        { filters: apiFilters, first: PAGE_SIZE, after },
+        getSession()?.token,
+      ),
+    [apiFilters],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -125,27 +163,17 @@ export default function OrdersTable() {
     async function loadOrders() {
       setLoading(true);
       try {
-        const token = getSession()?.token;
-        const data = await graphqlRequest<{ pedidos: OrderItem[] }>(
-          ORDERS_QUERY,
-          {
-            filters: {
-              ...(filters.fecha_inicio ? { fecha_inicio: filters.fecha_inicio } : {}),
-              ...(filters.fecha_fin ? { fecha_fin: filters.fecha_fin } : {}),
-              ...(filters.cliente_id ? { cliente_id: filters.cliente_id } : {}),
-              ...(filters.producto ? { producto: filters.producto } : {}),
-            },
-          },
-          token,
-        );
+        const data = await fetchOrders();
 
         if (!cancelled) {
-          setOrders(data.pedidos);
+          setOrders(connectionNodes(data.pedidos));
+          setPageInfo(data.pedidos.pageInfo);
           setSource("api");
         }
       } catch {
         if (!cancelled) {
           setOrders(MOCK_ORDERS);
+          setPageInfo({ endCursor: null, hasNextPage: false });
           setSource("mock");
         }
       } finally {
@@ -159,7 +187,20 @@ export default function OrdersTable() {
     return () => {
       cancelled = true;
     };
-  }, [filters.fecha_inicio, filters.fecha_fin, filters.cliente_id, filters.producto]);
+  }, [fetchOrders]);
+
+  const loadMore = async () => {
+    setLoadingMore(true);
+    try {
+      const data = await fetchOrders(pageInfo.endCursor);
+      setOrders((prev) => [...prev, ...connectionNodes(data.pedidos)]);
+      setPageInfo(data.pedidos.pageInfo);
+    } catch (error) {
+      console.error("Error loading pedidos:", error);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const filteredOrders = useMemo(
     () => orders.filter((order) => matchesFilters(order, filters)),
@@ -233,6 +274,19 @@ export default function OrdersTable() {
             )}
           </TableBody>
         </Table>
+      )}
+
+      {!loading && pageInfo.hasNextPage && (
+        <div className="flex justify-center">
+          <Button
+            variant="secondary"
+            onClick={loadMore}
+            isLoading={loadingMore}
+            className="w-auto px-8"
+          >
+            Cargar más pedidos
+          </Button>
+        </div>
       )}
     </section>
   );

@@ -1,6 +1,11 @@
 import { Args, Context, ID, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { EmpresasService } from './empresas.service';
-import { EmpresaModel, MessagePayload } from '../graphql/models';
+import {
+  EmpresaConnection,
+  EmpresaModel,
+  MessagePayload,
+} from '../graphql/models';
+import { PaginationArgs } from '../common/pagination';
 import { CreateEmpresaInput, UpdateEmpresaInput } from '../graphql/inputs';
 import { getUserFromContext } from '../graphql/graphql-auth';
 
@@ -8,14 +13,11 @@ import { getUserFromContext } from '../graphql/graphql-auth';
 export class EmpresasResolver {
   constructor(private readonly empresasService: EmpresasService) {}
 
-  @Query(() => [EmpresaModel])
-  async empresas(@Context() context: any) {
+  @Query(() => EmpresaConnection)
+  async empresas(@Args() pagination: PaginationArgs, @Context() context: any) {
     const user = getUserFromContext(context);
     // Admins see all empresas, other users see only their associated empresas
-    if (user.rol === 'admin') {
-      return this.empresasService.findAll();
-    }
-    return this.empresasService.findAllForUser(user.id);
+    return this.empresasService.list(user, pagination);
   }
 
   @Mutation(() => EmpresaModel)

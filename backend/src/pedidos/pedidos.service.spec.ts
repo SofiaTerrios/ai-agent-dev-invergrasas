@@ -13,6 +13,7 @@ describe('PedidosService', () => {
     pedido: {
       create: jest.Mock;
       findMany: jest.Mock;
+      count: jest.Mock;
       findUnique: jest.Mock;
       update: jest.Mock;
     };
@@ -29,6 +30,7 @@ describe('PedidosService', () => {
       pedido: {
         create: jest.fn(),
         findMany: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
         findUnique: jest.fn(),
         update: jest.fn(),
       },
@@ -106,12 +108,13 @@ describe('PedidosService', () => {
   });
 
   describe('listForUser', () => {
-    it('returns empty array when user has no associated empresas', async () => {
+    it('returns an empty page when user has no associated empresas', async () => {
       prisma.userEmpresa.findMany.mockResolvedValue([]);
 
       const res = await service.listForUser('user-1', {});
 
-      expect(res).toEqual([]);
+      expect(res.edges).toEqual([]);
+      expect(res.pageInfo.hasNextPage).toBe(false);
       expect(prisma.userEmpresa.findMany).toHaveBeenCalledWith({
         where: { user_id: 'user-1' },
       });
@@ -153,11 +156,12 @@ describe('PedidosService', () => {
           },
         },
         include: { cliente: true },
-        orderBy: { fecha: 'desc' },
+        orderBy: [{ fecha: 'desc' }, { created_at: 'desc' }, { id: 'desc' }],
+        take: 21,
       });
-      expect(res).toHaveLength(1);
-      expect(res[0].cantidad_kg).toBe(150);
-      expect(res[0].cliente.nombre).toBe('Cliente Uno');
+      expect(res.edges).toHaveLength(1);
+      expect(res.edges[0].node.cantidad_kg).toBe(150);
+      expect(res.edges[0].node.cliente.nombre).toBe('Cliente Uno');
     });
 
     it('limits results to pedidos from associated empresas only', async () => {
@@ -174,8 +178,44 @@ describe('PedidosService', () => {
           empresa_id: { in: ['empresa-1', 'empresa-2'] },
         },
         include: { cliente: true },
-        orderBy: { fecha: 'desc' },
+        orderBy: [{ fecha: 'desc' }, { created_at: 'desc' }, { id: 'desc' }],
+        take: 21,
       });
+    });
+
+    it('paginates with a cursor and reports the next page', async () => {
+      prisma.userEmpresa.findMany.mockResolvedValue([
+        { user_id: 'user-1', empresa_id: 'empresa-1' },
+      ]);
+      const pedido = (id: string) => ({
+        id,
+        empresa_id: 'empresa-1',
+        cantidad_kg: decimal(1),
+        cliente: null,
+      });
+      prisma.pedido.findMany.mockResolvedValue([
+        pedido('p3'),
+        pedido('p4'),
+        pedido('p5'),
+      ]);
+      prisma.pedido.count.mockResolvedValue(5);
+
+      const first = await service.listForUser('user-1', {}, { first: 2 });
+      expect(first.edges).toHaveLength(2);
+      expect(first.pageInfo.hasNextPage).toBe(true);
+      expect(first.totalCount).toBe(5);
+
+      await service.listForUser(
+        'user-1',
+        {},
+        {
+          first: 2,
+          after: first.pageInfo.endCursor!,
+        },
+      );
+      expect(prisma.pedido.findMany).toHaveBeenLastCalledWith(
+        expect.objectContaining({ take: 3, skip: 1, cursor: { id: 'p4' } }),
+      );
     });
   });
 
@@ -188,10 +228,14 @@ describe('PedidosService', () => {
     prisma.userEmpresa.findUnique.mockResolvedValue(null);
 
     await expect(
-      service.update('pedido-1', { cantidad_kg: 200 }, {
-        id: 'user-1',
-        rol: 'empleado',
-      }),
+      service.update(
+        'pedido-1',
+        { cantidad_kg: 200 },
+        {
+          id: 'user-1',
+          rol: 'empleado',
+        },
+      ),
     ).rejects.toThrow(ForbiddenException);
   });
 });

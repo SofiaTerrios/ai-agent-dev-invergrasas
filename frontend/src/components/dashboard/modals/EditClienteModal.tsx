@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import FormError from "@/components/ui/FormError";
-import { graphqlRequest } from "@/lib/graphql";
+import { fetchAllNodes, graphqlRequest } from "@/lib/graphql";
 import { GET_EMPRESAS_QUERY, type Empresa } from "@/graphql/empresas";
 import { UPDATE_CLIENTE_MUTATION, type Cliente, type UpdateClienteInput } from "@/graphql/clientes";
 
@@ -80,8 +80,8 @@ export default function EditClienteModal({
   useEffect(() => {
     if (isOpen && token) {
       setLoadingEmpresas(true);
-      graphqlRequest<{ empresas: Empresa[] }>(GET_EMPRESAS_QUERY, undefined, token)
-        .then((data) => setEmpresas(data.empresas || []))
+      fetchAllNodes<Empresa>(GET_EMPRESAS_QUERY, "empresas", {}, token)
+        .then(setEmpresas)
         .catch((err) => console.error("Error loading empresas:", err))
         .finally(() => setLoadingEmpresas(false));
     }

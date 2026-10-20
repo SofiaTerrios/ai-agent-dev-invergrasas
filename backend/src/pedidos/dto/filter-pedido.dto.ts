@@ -1,7 +1,9 @@
 import { IsDateString, IsEnum, IsOptional, IsUUID } from 'class-validator';
 import { Producto } from '../../graphql/enums';
+import { PaginationArgs } from '../../common/pagination';
 
-export class FilterPedidoDto {
+// Query params of GET /api/pedidos, including pagination (first/after)
+export class FilterPedidoDto extends PaginationArgs {
   @IsOptional()
   @IsDateString()
   fecha_inicio?: string;

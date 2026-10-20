@@ -10,7 +10,7 @@ const CREATE = `
     createCertificado(input: $input) { id archivo_url }
   }
 `;
-const LIST = `query { certificados { id empresa_id } }`;
+const LIST = `query { certificados { edges { node { id empresa_id } } } }`;
 const GET = `query($id: ID!) { certificado(id: $id) { id lote parametros { nombre } } }`;
 
 describe('Certificados E2E - aislamiento por empresa', () => {
@@ -50,7 +50,9 @@ describe('Certificados E2E - aislamiento por empresa', () => {
 
     const [a, b] = await Promise.all(
       ['A', 'B'].map((x) =>
-        prisma.empresa.create({ data: { razon_social: `Empresa ${x}`, nit: `CERT-${x}` } }),
+        prisma.empresa.create({
+          data: { razon_social: `Empresa ${x}`, nit: `CERT-${x}` },
+        }),
       ),
     );
     empresaA = a.id;
@@ -99,9 +101,17 @@ describe('Certificados E2E - aislamiento por empresa', () => {
     });
     for (const { archivo_url } of files) {
       if (archivo_url) {
-        rmSync(path.join(process.cwd(), 'static', 'certificados', path.basename(archivo_url)), {
-          force: true,
-        });
+        rmSync(
+          path.join(
+            process.cwd(),
+            'static',
+            'certificados',
+            path.basename(archivo_url),
+          ),
+          {
+            force: true,
+          },
+        );
       }
     }
     await app.close();
@@ -115,21 +125,29 @@ describe('Certificados E2E - aislamiento por empresa', () => {
   });
 
   it('does not let a user generate certificados for another empresa', async () => {
-    const res = await gql(app, tokenA, CREATE, { input: input({ empresa_id: empresaB }) });
+    const res = await gql(app, tokenA, CREATE, {
+      input: input({ empresa_id: empresaB }),
+    });
     expect(res.body.errors?.[0]?.extensions?.code).toBe('FORBIDDEN');
   });
 
   it('rejects a cliente from another empresa', async () => {
-    const res = await gql(app, tokenA, CREATE, { input: input({ cliente_id: clienteB }) });
-    expect(res.body.errors?.[0]?.message).toBe('El cliente no pertenece a la empresa');
+    const res = await gql(app, tokenA, CREATE, {
+      input: input({ cliente_id: clienteB }),
+    });
+    expect(res.body.errors?.[0]?.message).toBe(
+      'El cliente no pertenece a la empresa',
+    );
   });
 
   it('lists only the certificados of the user empresa', async () => {
     const resA = await gql(app, tokenA, LIST);
-    expect(resA.body.data.certificados).toEqual([{ id: certificadoA, empresa_id: empresaA }]);
+    expect(resA.body.data.certificados.edges).toEqual([
+      { node: { id: certificadoA, empresa_id: empresaA } },
+    ]);
 
     const resB = await gql(app, tokenB, LIST);
-    expect(resB.body.data.certificados).toEqual([]);
+    expect(resB.body.data.certificados.edges).toEqual([]);
   });
 
   it('does not expose a certificado of another empresa', async () => {

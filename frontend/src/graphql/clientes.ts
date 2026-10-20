@@ -1,13 +1,22 @@
 export const GET_CLIENTES_QUERY = `
-  query GetClientes {
-    clientes {
-      id
-      nombre
-      contacto
-      telefono
-      correo
-      empresa_id
-      created_at
+  query GetClientes($first: Int, $after: String) {
+    clientes(first: $first, after: $after) {
+      edges {
+        node {
+          id
+          nombre
+          contacto
+          telefono
+          correo
+          empresa_id
+          created_at
+        }
+      }
+      pageInfo {
+        endCursor
+        hasNextPage
+      }
+      totalCount
     }
   }
 `;
@@ -69,11 +78,20 @@ export type CreateClienteInput = {
 export type UpdateClienteInput = Partial<CreateClienteInput>;
 
 export const GET_CLIENTES_BY_EMPRESA_QUERY = `
-  query GetClientesByEmpresa($empresaId: ID!) {
-    clientesByEmpresa(empresaId: $empresaId) {
-      id
-      nombre
-      empresa_id
+  query GetClientesByEmpresa($empresaId: ID!, $first: Int, $after: String) {
+    clientesByEmpresa(empresaId: $empresaId, first: $first, after: $after) {
+      edges {
+        node {
+          id
+          nombre
+          empresa_id
+        }
+      }
+      pageInfo {
+        endCursor
+        hasNextPage
+      }
+      totalCount
     }
   }
 `;

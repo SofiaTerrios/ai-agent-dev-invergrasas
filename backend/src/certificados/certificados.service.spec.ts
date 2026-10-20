@@ -49,6 +49,7 @@ describe('CertificadosService', () => {
         update: jest.fn(),
         findUnique: jest.fn(),
         findMany: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
       },
       cliente: { findUnique: jest.fn() },
       userEmpresa: {

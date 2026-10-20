@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { paginate, PaginationArgs } from '../common/pagination';
 import { CreateClienteDto } from './dto/create-cliente.dto';
 import { UpdateClienteDto } from './dto/update-cliente.dto';
 
@@ -38,7 +40,7 @@ export class ClientesService {
     return this.prisma.cliente.update({ where: { id }, data });
   }
 
-  async findAllByEmpresa(empresaId: string) {
+  async findAllByEmpresa(empresaId: string, pagination?: PaginationArgs) {
     const empresa = await this.prisma.empresa.findUnique({
       where: { id: empresaId },
     });
@@ -46,16 +48,24 @@ export class ClientesService {
       throw new NotFoundException('Empresa not found');
     }
 
-    return this.prisma.cliente.findMany({
-      where: { empresa_id: empresaId },
-    });
+    return this.list({ empresa_id: empresaId }, pagination);
   }
 
-  async findAll() {
-    return this.prisma.cliente.findMany({
-      include: { empresa: true },
-      orderBy: { created_at: 'desc' },
-    });
+  async findAll(pagination?: PaginationArgs) {
+    return this.list({}, pagination);
+  }
+
+  private list(where: Prisma.ClienteWhereInput, pagination?: PaginationArgs) {
+    return paginate(
+      pagination,
+      (page) =>
+        this.prisma.cliente.findMany({
+          where,
+          orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+          ...page,
+        }),
+      () => this.prisma.cliente.count({ where }),
+    );
   }
 
   async remove(id: string) {

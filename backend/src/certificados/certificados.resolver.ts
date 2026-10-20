@@ -2,7 +2,12 @@ import { Args, ID, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { CertificadosService } from './certificados.service';
 import { CreateCertificadoInput } from '../graphql/inputs';
-import { CertificadoAnalisisModel, CertificadoModel } from '../graphql/models';
+import {
+  CertificadoAnalisisModel,
+  CertificadoConnection,
+  CertificadoModel,
+} from '../graphql/models';
+import { CertificadosArgs } from '../graphql/args';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthUser } from '../auth/request.util';
@@ -30,12 +35,12 @@ export class CertificadosResolver {
     return this.certificadosService.createAnalisis(dto, user);
   }
 
-  @Query(() => [CertificadoModel])
+  @Query(() => CertificadoConnection)
   async certificados(
     @CurrentUser() user: AuthUser,
-    @Args('empresaId', { type: () => ID, nullable: true }) empresaId?: string,
+    @Args() { empresaId, ...pagination }: CertificadosArgs,
   ) {
-    return this.certificadosService.findAllForUser(user, empresaId);
+    return this.certificadosService.findAllForUser(user, empresaId, pagination);
   }
 
   @Query(() => CertificadoModel)

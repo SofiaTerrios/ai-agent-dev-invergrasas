@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Input from "@/components/ui/Input";
-import { graphqlRequest } from "@/lib/graphql";
+import { fetchAllNodes } from "@/lib/graphql";
 import { GET_EMPRESAS_QUERY, type Empresa } from "@/graphql/empresas";
 import { GET_CLIENTES_BY_EMPRESA_QUERY, type Cliente } from "@/graphql/clientes";
 
@@ -47,8 +47,8 @@ export default function StepDatosCliente({
 
   useEffect(() => {
     if (!token) return;
-    graphqlRequest<{ empresas: Empresa[] }>(GET_EMPRESAS_QUERY, undefined, token)
-      .then((data) => setEmpresas(data.empresas || []))
+    fetchAllNodes<Empresa>(GET_EMPRESAS_QUERY, "empresas", {}, token)
+      .then(setEmpresas)
       .catch((err) => {
         console.error("Error loading empresas:", err);
         setEmpresas([]);
@@ -57,14 +57,13 @@ export default function StepDatosCliente({
 
   useEffect(() => {
     if (!token || !empresa_id) return;
-    graphqlRequest<{ clientesByEmpresa: Cliente[] }>(
+    fetchAllNodes<Cliente>(
       GET_CLIENTES_BY_EMPRESA_QUERY,
+      "clientesByEmpresa",
       { empresaId: empresa_id },
       token,
     )
-      .then((data) =>
-        setClientesState({ empresaId: empresa_id, list: data.clientesByEmpresa || [] }),
-      )
+      .then((list) => setClientesState({ empresaId: empresa_id, list }))
       .catch((err) => console.error("Error loading clientes:", err));
   }, [token, empresa_id]);
 

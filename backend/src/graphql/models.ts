@@ -7,6 +7,7 @@ import {
   registerEnumType,
 } from '@nestjs/graphql';
 import { CertificadoTipo, Producto, Role, TipoEmpaque } from './enums';
+import { ConnectionType } from '../common/pagination';
 
 registerEnumType(Role, { name: 'Role' });
 registerEnumType(Producto, { name: 'Producto' });
@@ -201,3 +202,24 @@ export class CertificadoModel {
   @Field(() => [ParametroAnalisisModel])
   parametros!: ParametroAnalisisModel[];
 }
+
+@ObjectType()
+export class EmpresaConnection extends ConnectionType(
+  EmpresaModel,
+  'Empresa',
+) {}
+
+@ObjectType()
+export class ClienteConnection extends ConnectionType(
+  ClienteModel,
+  'Cliente',
+) {}
+
+@ObjectType()
+export class PedidoConnection extends ConnectionType(PedidoModel, 'Pedido') {}
+
+@ObjectType()
+export class CertificadoConnection extends ConnectionType(
+  CertificadoModel,
+  'Certificado',
+) {}

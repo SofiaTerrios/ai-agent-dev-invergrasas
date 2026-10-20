@@ -11,6 +11,7 @@ export class PedidosController {
   @Get()
   async findAll(@Request() req, @Query() filters: FilterPedidoDto) {
     const userId = req.user?.id ?? req.user?.userId;
-    return this.pedidosService.listForUser(userId, filters);
+    const { first, after, ...rest } = filters;
+    return this.pedidosService.listForUser(userId, rest, { first, after });
   }
 }

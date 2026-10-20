@@ -1,6 +1,12 @@
 import { Args, Context, ID, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { ClientesService } from './clientes.service';
-import { ClienteModel, MessagePayload } from '../graphql/models';
+import {
+  ClienteConnection,
+  ClienteModel,
+  MessagePayload,
+} from '../graphql/models';
+import { PaginationArgs } from '../common/pagination';
+import { ClientesByEmpresaArgs } from '../graphql/args';
 import { CreateClienteInput, UpdateClienteInput } from '../graphql/inputs';
 import { getUserFromContext } from '../graphql/graphql-auth';
 
@@ -8,23 +14,23 @@ import { getUserFromContext } from '../graphql/graphql-auth';
 export class ClientesResolver {
   constructor(private readonly clientesService: ClientesService) {}
 
-  @Query(() => [ClienteModel])
-  async clientes(@Context() context: any) {
+  @Query(() => ClienteConnection)
+  async clientes(@Args() pagination: PaginationArgs, @Context() context: any) {
     const user = getUserFromContext(context);
     // Admins see all clientes, others cannot access this query
     if (user.rol !== 'admin') {
       throw new Error('Only admins can view all clients');
     }
-    return this.clientesService.findAll();
+    return this.clientesService.findAll(pagination);
   }
 
-  @Query(() => [ClienteModel])
+  @Query(() => ClienteConnection)
   async clientesByEmpresa(
-    @Args('empresaId', { type: () => ID }) empresaId: string,
+    @Args() { empresaId, ...pagination }: ClientesByEmpresaArgs,
     @Context() context: any,
   ) {
     getUserFromContext(context);
-    return this.clientesService.findAllByEmpresa(empresaId);
+    return this.clientesService.findAllByEmpresa(empresaId, pagination);
   }
 
   @Mutation(() => ClienteModel)

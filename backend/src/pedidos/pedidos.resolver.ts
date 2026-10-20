@@ -1,24 +1,21 @@
 import { Args, Context, ID, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { PedidosService } from './pedidos.service';
-import { PedidoModel } from '../graphql/models';
-import {
-  CreatePedidoInput,
-  PedidoFiltersInput,
-  UpdatePedidoInput,
-} from '../graphql/inputs';
+import { PedidoConnection, PedidoModel } from '../graphql/models';
+import { PedidosArgs } from '../graphql/args';
+import { CreatePedidoInput, UpdatePedidoInput } from '../graphql/inputs';
 import { getUserFromContext } from '../graphql/graphql-auth';
 
 @Resolver(() => PedidoModel)
 export class PedidosResolver {
   constructor(private readonly pedidosService: PedidosService) {}
 
-  @Query(() => [PedidoModel])
+  @Query(() => PedidoConnection)
   async pedidos(
-    @Args('filters', { nullable: true }) filters: PedidoFiltersInput = {},
+    @Args() { filters = {}, ...pagination }: PedidosArgs,
     @Context() context: any,
   ) {
     const user = getUserFromContext(context);
-    return this.pedidosService.listForUser(user.id, filters);
+    return this.pedidosService.listForUser(user.id, filters, pagination);
   }
 
   @Mutation(() => PedidoModel)

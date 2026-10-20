@@ -5,6 +5,11 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  emptyConnection,
+  paginate,
+  PaginationArgs,
+} from '../common/pagination';
 import { CreatePedidoDto } from './dto/create-pedido.dto';
 import { FilterPedidoDto } from './dto/filter-pedido.dto';
 import { UpdatePedidoDto } from './dto/update-pedido.dto';
@@ -35,11 +40,15 @@ export class PedidosService {
     return this.serializePedido(pedido);
   }
 
-  async listForUser(userId: string, filters: FilterPedidoDto) {
+  async listForUser(
+    userId: string,
+    filters: FilterPedidoDto,
+    pagination?: PaginationArgs,
+  ) {
     const links = await this.prisma.userEmpresa.findMany({
       where: { user_id: userId },
     });
-    if (!links || links.length === 0) return [];
+    if (!links || links.length === 0) return emptyConnection();
 
     const empresaIds = links.map((link) => link.empresa_id);
     const where: Prisma.PedidoWhereInput = {
@@ -51,7 +60,8 @@ export class PedidosService {
 
     if (filters.fecha_inicio || filters.fecha_fin) {
       where.fecha = {};
-      if (filters.fecha_inicio) where.fecha.gte = new Date(filters.fecha_inicio);
+      if (filters.fecha_inicio)
+        where.fecha.gte = new Date(filters.fecha_inicio);
       if (filters.fecha_fin) {
         const endOfDay = new Date(filters.fecha_fin);
         endOfDay.setHours(23, 59, 59, 999);
@@ -59,12 +69,19 @@ export class PedidosService {
       }
     }
 
-    const pedidos = await this.prisma.pedido.findMany({
-      where,
-      include: { cliente: true },
-      orderBy: { fecha: 'desc' },
-    });
-    return pedidos.map((pedido) => this.serializePedido(pedido));
+    return paginate(
+      pagination,
+      async (page) => {
+        const pedidos = await this.prisma.pedido.findMany({
+          where,
+          include: { cliente: true },
+          orderBy: [{ fecha: 'desc' }, { created_at: 'desc' }, { id: 'desc' }],
+          ...page,
+        });
+        return pedidos.map((pedido) => this.serializePedido(pedido));
+      },
+      () => this.prisma.pedido.count({ where }),
+    );
   }
 
   async update(
@@ -113,7 +130,9 @@ export class PedidosService {
     return this.serializePedido(updated);
   }
 
-  private serializePedido<T extends { cantidad_kg: Prisma.Decimal }>(pedido: T) {
+  private serializePedido<T extends { cantidad_kg: Prisma.Decimal }>(
+    pedido: T,
+  ) {
     return {
       ...pedido,
       cantidad_kg: pedido.cantidad_kg.toNumber(),

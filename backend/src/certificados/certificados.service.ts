@@ -7,6 +7,7 @@ import { CertificadoTipo, Prisma } from '@prisma/client';
 import { existsSync } from 'fs';
 import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
+import { paginate, PaginationArgs } from '../common/pagination';
 import {
   accessibleEmpresaIds,
   assertEmpresaAccess,
@@ -141,7 +142,11 @@ export class CertificadosService {
     };
   }
 
-  async findAllForUser(actor: Actor, empresaId?: string) {
+  async findAllForUser(
+    actor: Actor,
+    empresaId?: string,
+    pagination?: PaginationArgs,
+  ) {
     if (empresaId) await assertEmpresaAccess(this.prisma, actor, empresaId);
     const empresaIds = await accessibleEmpresaIds(this.prisma, actor);
 
@@ -151,12 +156,19 @@ export class CertificadosService {
         ? { empresa_id: { in: empresaIds } }
         : {};
 
-    const certificados = await this.prisma.certificadoAnalisis.findMany({
-      where,
-      include: certificadoInclude,
-      orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
-    });
-    return certificados.map((c) => this.serialize(c));
+    return paginate(
+      pagination,
+      async (page) => {
+        const certificados = await this.prisma.certificadoAnalisis.findMany({
+          where,
+          include: certificadoInclude,
+          orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+          ...page,
+        });
+        return certificados.map((c) => this.serialize(c));
+      },
+      () => this.prisma.certificadoAnalisis.count({ where }),
+    );
   }
 
   async findOneForUser(actor: Actor, id: string) {

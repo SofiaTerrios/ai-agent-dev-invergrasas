@@ -7,7 +7,9 @@ import {
   Get,
   UseGuards,
   Request,
+  Query,
 } from '@nestjs/common';
+import { PaginationArgs } from '../common/pagination';
 import { EmpresasService } from './empresas.service';
 import { CreateEmpresaDto } from './dto/create-empresa.dto';
 import { UpdateEmpresaDto } from './dto/update-empresa.dto';
@@ -30,9 +32,9 @@ export class EmpresasController {
 
   @Get()
   @UseGuards(JwtAuthGuard)
-  async findAll(@Request() req) {
-    const userId = req.user.userId; // Extraído del token JWT
-    return this.empresasService.findAllForUser(userId);
+  async findAll(@Request() req, @Query() pagination: PaginationArgs) {
+    // Extraído del token JWT
+    return this.empresasService.list(req.user, pagination);
   }
 
   @Post(':id/users')
