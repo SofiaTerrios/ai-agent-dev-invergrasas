@@ -22,17 +22,18 @@ model User {
 }
 
 model Empresa {
-  id           String        @id @default(uuid())
+  id           String                @id @default(uuid())
   razon_social String
-  nit          String        @unique
+  nit          String                @unique
   direccion    String?
   telefono     String?
   correo       String?
-  created_at   DateTime      @default(now())
+  created_at   DateTime              @default(now())
   deleted_at   DateTime?
   users        UserEmpresa[]
   clientes     Cliente[]
   pedidos      Pedido[]
+  certificados CertificadoAnalisis[]
 
   @@map("empresas")
 }
@@ -53,16 +54,17 @@ model UserEmpresa {
 }
 
 model Cliente {
-  id         String    @id @default(uuid())
-  nombre     String
-  contacto   String
-  telefono   String
-  correo     String
-  empresa_id String
-  created_at DateTime  @default(now())
-  deleted_at DateTime?
-  empresa    Empresa   @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
-  pedidos    Pedido[]
+  id           String                @id @default(uuid())
+  nombre       String
+  contacto     String
+  telefono     String
+  correo       String
+  empresa_id   String
+  created_at   DateTime              @default(now())
+  deleted_at   DateTime?
+  empresa      Empresa               @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
+  pedidos      Pedido[]
+  certificados CertificadoAnalisis[]
 
   @@index([empresa_id])
   @@map("clientes")
@@ -96,6 +98,9 @@ enum CertificadoTipo {
 
 model CertificadoAnalisis {
   id                String              @id @default(uuid())
+  // Tenant. Nullable only for legacy rows that could not be backfilled.
+  empresa_id        String?
+  cliente_id        String?
   tipo              CertificadoTipo
   empresa_cliente   String
   nit_cliente       String?
@@ -108,7 +113,11 @@ model CertificadoAnalisis {
   created_at        DateTime            @default(now())
   deleted_at        DateTime?
   parametros        ParametroAnalisis[]
+  empresa           Empresa?            @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
+  cliente           Cliente?            @relation(fields: [cliente_id], references: [id], onDelete: Restrict)
 
+  @@index([empresa_id])
+  @@index([cliente_id])
   @@map("certificados_analisis")
 }
 

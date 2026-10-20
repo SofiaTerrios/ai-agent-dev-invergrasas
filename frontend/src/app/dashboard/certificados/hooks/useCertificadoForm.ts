@@ -16,6 +16,8 @@ export interface ParametrosForm {
 
 export interface CertificadoFormData {
   tipo: CertificadoTipo | null;
+  empresa_id: string;
+  cliente_id: string;
   empresa_cliente: string;
   nit_cliente: string;
   lote: string;
@@ -36,6 +38,8 @@ const initialParametros: ParametrosForm = {
 
 const initialData: CertificadoFormData = {
   tipo: null,
+  empresa_id: "",
+  cliente_id: "",
   empresa_cliente: "",
   nit_cliente: "",
   lote: "",
@@ -89,6 +93,7 @@ export function useCertificadoForm() {
     if (currentStep === 1) {
       if (!formData.tipo) newErrors.tipo = "Debes seleccionar un tipo de certificado";
     } else if (currentStep === 2) {
+      if (!formData.empresa_id) newErrors.empresa_id = "Debes seleccionar la empresa emisora";
       if (!formData.empresa_cliente.trim())
         newErrors.empresa_cliente = "El nombre de la empresa es requerido";
     } else if (currentStep === 3) {
@@ -145,6 +150,8 @@ export function useCertificadoForm() {
   const getApiPayload = () => {
     const payload = {
       tipo: formData.tipo,
+      empresa_id: formData.empresa_id,
+      cliente_id: formData.cliente_id || undefined,
       empresa_cliente: formData.empresa_cliente,
       nit_cliente: formData.nit_cliente || undefined,
       lote: formData.lote,

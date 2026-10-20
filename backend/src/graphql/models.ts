@@ -1,4 +1,11 @@
-import { Field, Float, ID, ObjectType, registerEnumType } from '@nestjs/graphql';
+import {
+  Field,
+  Float,
+  ID,
+  Int,
+  ObjectType,
+  registerEnumType,
+} from '@nestjs/graphql';
 import { CertificadoTipo, Producto, Role, TipoEmpaque } from './enums';
 
 registerEnumType(Role, { name: 'Role' });
@@ -133,4 +140,64 @@ export class CertificadoAnalisisModel {
 
   @Field()
   mensaje!: string;
+}
+
+@ObjectType()
+export class ParametroAnalisisModel {
+  @Field()
+  nombre!: string;
+
+  @Field()
+  valor!: string;
+
+  @Field(() => Int)
+  orden!: number;
+}
+
+@ObjectType()
+export class CertificadoModel {
+  @Field(() => ID)
+  id!: string;
+
+  @Field(() => CertificadoTipo)
+  tipo!: CertificadoTipo;
+
+  @Field(() => ID, { nullable: true })
+  empresa_id?: string | null;
+
+  @Field(() => ID, { nullable: true })
+  cliente_id?: string | null;
+
+  @Field()
+  empresa_cliente!: string;
+
+  @Field(() => String, { nullable: true })
+  nit_cliente?: string | null;
+
+  @Field()
+  lote!: string;
+
+  @Field(() => Float, { nullable: true })
+  peso_kg?: number | null;
+
+  @Field()
+  fecha_emision!: Date;
+
+  @Field()
+  fecha_vencimiento!: Date;
+
+  @Field()
+  firmado_por!: string;
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'Ruta autenticada para descargar el PDF',
+  })
+  archivo_url?: string | null;
+
+  @Field()
+  created_at!: Date;
+
+  @Field(() => [ParametroAnalisisModel])
+  parametros!: ParametroAnalisisModel[];
 }

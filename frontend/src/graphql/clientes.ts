@@ -67,3 +67,13 @@ export type CreateClienteInput = {
 };
 
 export type UpdateClienteInput = Partial<CreateClienteInput>;
+
+export const GET_CLIENTES_BY_EMPRESA_QUERY = `
+  query GetClientesByEmpresa($empresaId: ID!) {
+    clientesByEmpresa(empresaId: $empresaId) {
+      id
+      nombre
+      empresa_id
+    }
+  }
+`;

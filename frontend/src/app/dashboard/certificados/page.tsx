@@ -14,6 +14,7 @@ import StepParametros from "./components/StepParametros";
 import StepFechaVencimiento from "./components/StepFechaVencimiento";
 import StepResumen from "./components/StepResumen";
 import { graphqlRequest } from "@/lib/graphql";
+import { downloadAuthenticatedFile } from "@/lib/api";
 import { gql } from "@apollo/client";
 import { print } from "graphql";
 
@@ -78,6 +79,20 @@ export default function CertificadosPage() {
     }
   };
 
+  const handleDownload = async () => {
+    if (!token || !successData) return;
+    setApiError(null);
+    try {
+      await downloadAuthenticatedFile(
+        successData.archivo_url,
+        token,
+        `certificado-${successData.id}.pdf`,
+      );
+    } catch (err: unknown) {
+      setApiError(err instanceof Error ? err.message : "Error desconocido");
+    }
+  };
+
   const handleReset = () => {
     window.location.reload();
   };
@@ -95,6 +110,9 @@ export default function CertificadosPage() {
       case 2:
         return (
           <StepDatosCliente
+            token={token}
+            empresa_id={formData.empresa_id}
+            cliente_id={formData.cliente_id}
             empresa_cliente={formData.empresa_cliente}
             nit_cliente={formData.nit_cliente}
             onChange={updateFormData}
@@ -171,10 +189,9 @@ export default function CertificadosPage() {
               El documento ha sido creado correctamente y está listo para descargar.
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <a
-                href={successData.archivo_url}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
+                onClick={handleDownload}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#1A8A3A] px-6 py-3 font-bold text-white transition hover:bg-[#0F6E2E] sm:w-auto"
               >
                 <svg
@@ -187,11 +204,16 @@ export default function CertificadosPage() {
                   <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
                 </svg>
                 Descargar PDF
-              </a>
+              </button>
               <Button variant="secondary" onClick={handleReset} className="sm:w-auto">
                 Generar otro
               </Button>
             </div>
+            {apiError && (
+              <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+                {apiError}
+              </div>
+            )}
           </div>
         ) : (
           <div className="rounded-2xl border border-[#DDE8E2] bg-white p-6 shadow-sm md:p-8">
