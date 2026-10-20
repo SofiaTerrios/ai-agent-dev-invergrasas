@@ -64,6 +64,9 @@ export class ClientesService {
       throw new NotFoundException('Cliente not found');
     }
 
-    await this.prisma.cliente.delete({ where: { id } });
+    await this.prisma.cliente.update({
+      where: { id },
+      data: { deleted_at: new Date() },
+    });
   }
 }

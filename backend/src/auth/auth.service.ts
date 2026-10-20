@@ -17,7 +17,10 @@ export class AuthService {
     password: string,
     rol: Role = Role.empleado,
   ) {
-    const existing = await this.prisma.user.findUnique({ where: { email } });
+    // email is unique at DB level, so soft-deleted users still hold it
+    const existing = await this.prisma.user.findUnique({
+      where: { email, deleted_at: undefined },
+    });
     if (existing) throw new ConflictException('Email already registered');
     const hashed = await hashPassword(password);
     const saved = await this.prisma.user.create({
