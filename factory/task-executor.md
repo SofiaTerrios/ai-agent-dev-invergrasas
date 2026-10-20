@@ -1,4 +1,4 @@
-# AI Software Factory — Task Execution Engine
+# Flujo con agentes — Ejecución de tareas
 
 The **Task Execution Engine** describes how task files stored in `tasks/` are processed, routed to the appropriate agent, and tracked through to completion.
 
@@ -6,7 +6,7 @@ The **Task Execution Engine** describes how task files stored in `tasks/` are pr
 
 ## Overview
 
-Every unit of work in the AI Software Factory is represented as a **task file** in `tasks/`. The Task Execution Engine provides the rules and conventions for how these files trigger agent activity and how results are recorded.
+Every unit of work in this repository is represented as a **task file** in `tasks/`. The Task Execution Engine provides the rules and conventions for how these files trigger agent activity and how results are recorded.
 
 ---
 

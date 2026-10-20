@@ -2,7 +2,7 @@
 
 **Domain:** `[FRONTEND]`
 **Assigned Agent:** Frontend Agent
-**Status:** `pending`
+**Status:** `done`
 **Created:** 2026-05-06
 **Depends On:** `tasks/02-frontend-auth.md`, `tasks/01-project-setup.md`
 
@@ -10,17 +10,17 @@
 Diseñar y construir el `Dashboard` principal para la aplicación: un layout limpio y profesional que muestre resumen de ventas/entregas, acceso rápido a pedidos, y el hero slider en la parte superior. Debe usar los colores y tokens ya definidos por el proyecto y componentes reutilizables.
 
 ## Requirements
-- [ ] `Dashboard` page: layout con `Header`, `Sidebar` (opcional en móvil), `Hero` (slider ya existente), `Stats` (cards), `Orders` (tabla con filtros) y `Activity` (lista o timeline).
-- [ ] Componentes reutilizables: `Header`, `Sidebar`, `StatsCard`, `OrdersTable`, `FiltersPanel`, `HeroSlider` (si no existe, refactorizar la implementación actual a `components/dashboard/HeroSlider.tsx`).
-- [ ] Responsive: en móvil el sidebar debe colapsar y el contenido principal debe priorizarse.
-- [ ] Usar los tokens de color/espaciado del proyecto (Tailwind) y mantener consistencia tipográfica.
-- [ ] Conectar `OrdersTable` con el endpoint `GET /api/pedidos` (usar fetch/axios); si backend no está disponible, implementar mock-data utilizable en desarrollo.
-- [ ] Accesibilidad: tablas con encabezados, botones con aria-labels, foco visible.
+- [x] `Dashboard` page: layout con `Header`, `Sidebar` (opcional en móvil), `Hero` (slider ya existente), `Stats` (cards), `Orders` (tabla con filtros) y `Activity` (lista o timeline).
+- [x] Componentes reutilizables: `Header`, `Sidebar`, `StatsCard`, `OrdersTable`, `FiltersPanel`, `HeroSlider` (si no existe, refactorizar la implementación actual a `components/dashboard/HeroSlider.tsx`).
+- [x] Responsive: en móvil el sidebar debe colapsar y el contenido principal debe priorizarse.
+- [x] Usar los tokens de color/espaciado del proyecto (Tailwind) y mantener consistencia tipográfica.
+- [x] Conectar `OrdersTable` con el endpoint `GET /api/pedidos` (usar fetch/axios); si backend no está disponible, implementar mock-data utilizable en desarrollo.
+- [x] Accesibilidad: tablas con encabezados, botones con aria-labels, foco visible.
 
 ## Acceptance Criteria
-- [ ] Dashboard se ve consistente con el resto del sitio y usa los colores del proyecto.
-- [ ] Los componentes son reutilizables y están dentro de `frontend/src/components/dashboard/` o `frontend/src/components/ui/` según corresponda.
-- [ ] OrdersTable muestra datos (mock o reales) y permite filtrar por fecha/cliente/producto.
+- [x] Dashboard se ve consistente con el resto del sitio y usa los colores del proyecto.
+- [x] Los componentes son reutilizables y están dentro de `frontend/src/components/dashboard/` o `frontend/src/components/ui/` según corresponda.
+- [x] OrdersTable muestra datos (mock o reales) y permite filtrar por fecha/cliente/producto.
 
 ## Files to Create or Modify
 - `frontend/src/app/dashboard/page.tsx`
@@ -34,3 +34,7 @@ Diseñar y construir el `Dashboard` principal para la aplicación: un layout lim
 ## Notes
 - Colocar componentes en carpetas claras: `components/dashboard/`, `components/ui/`, `components/layouts/`.
 - Mantener consistencia con `Auth` styles y `Hero` existente.
+
+## Estado actual (2026-10-20)
+
+- `OrdersTable` ya no usa datos mock: consume la query paginada `pedidos` (IG-6, IG-10).
