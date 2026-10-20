@@ -17,10 +17,9 @@ import {
   CreateCertificadoDto,
 } from './dto/create-certificado.dto';
 import { AnalisisPdfService } from '../utils/pdf/analisis-pdf.service';
+import { certificadosDir } from '../utils/pdf/certificados-dir';
 
 type Actor = { id: string; rol?: string };
-
-const PDF_DIR = path.join(process.cwd(), 'static', 'certificados');
 
 const certificadoInclude = {
   parametros: { where: { deleted_at: null }, orderBy: { orden: 'asc' } },
@@ -181,7 +180,10 @@ export class CertificadosService {
     if (!certificado.archivo_url) {
       throw new NotFoundException('El certificado no tiene PDF');
     }
-    const filePath = path.join(PDF_DIR, path.basename(certificado.archivo_url));
+    const filePath = path.join(
+      certificadosDir(),
+      path.basename(certificado.archivo_url),
+    );
     if (!existsSync(filePath)) {
       throw new NotFoundException('Archivo PDF no encontrado');
     }

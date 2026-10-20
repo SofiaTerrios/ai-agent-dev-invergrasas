@@ -3,6 +3,9 @@
 /node_modules
 /build
 
+# Generated certificado PDFs (may contain client data)
+/static/certificados/
+
 # Logs
 logs
 *.log
