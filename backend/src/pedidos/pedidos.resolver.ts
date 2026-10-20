@@ -22,7 +22,7 @@ export class PedidosResolver {
     @Args() { filters = {}, ...pagination }: PedidosArgs,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.pedidosService.listForUser(user.id, filters, pagination);
+    return this.pedidosService.listForUser(user, filters, pagination);
   }
 
   @Mutation(() => PedidoModel)

@@ -20,6 +20,6 @@ export class PedidosController {
     @Query() filters: FilterPedidoDto,
   ) {
     const { first, after, ...rest } = filters;
-    return this.pedidosService.listForUser(user.id, rest, { first, after });
+    return this.pedidosService.listForUser(user, rest, { first, after });
   }
 }

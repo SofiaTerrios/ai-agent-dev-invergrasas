@@ -169,6 +169,11 @@ export class PedidoFiltersInput {
   @Field(() => ID, { nullable: true })
   @IsOptional()
   @IsUUID()
+  empresa_id?: string;
+
+  @Field(() => ID, { nullable: true })
+  @IsOptional()
+  @IsUUID()
   cliente_id?: string;
 
   @Field(() => Producto, { nullable: true })

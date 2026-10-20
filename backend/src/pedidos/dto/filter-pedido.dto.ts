@@ -5,6 +5,10 @@ import { PaginationArgs } from '../../common/pagination';
 // Query params of GET /api/pedidos, including pagination (first/after)
 export class FilterPedidoDto extends PaginationArgs {
   @IsOptional()
+  @IsUUID()
+  empresa_id?: string;
+
+  @IsOptional()
   @IsDateString()
   fecha_inicio?: string;
 

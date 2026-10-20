@@ -6,6 +6,10 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  accessibleEmpresaIds,
+  assertEmpresaAccess,
+} from '../empresas/empresa-access';
+import {
   emptyConnection,
   paginate,
   PaginationArgs,
@@ -45,21 +49,24 @@ export class PedidosService {
     return this.serializePedido(pedido);
   }
 
+  // Pedidos of the empresas the actor can access (admins: all), optionally
+  // narrowed to one empresa with filters.empresa_id.
   async listForUser(
-    userId: string,
+    actor: { id: string; rol?: string },
     filters: FilterPedidoDto,
     pagination?: PaginationArgs,
   ) {
-    const links = await this.prisma.userEmpresa.findMany({
-      where: { user_id: userId },
-    });
-    if (!links || links.length === 0)
-      return emptyConnection<PedidoSerializado>();
-
-    const empresaIds = links.map((link) => link.empresa_id);
-    const where: Prisma.PedidoWhereInput = {
-      empresa_id: { in: empresaIds },
-    };
+    const where: Prisma.PedidoWhereInput = {};
+    if (filters.empresa_id) {
+      await assertEmpresaAccess(this.prisma, actor, filters.empresa_id);
+      where.empresa_id = filters.empresa_id;
+    } else {
+      const empresaIds = await accessibleEmpresaIds(this.prisma, actor);
+      if (empresaIds?.length === 0) {
+        return emptyConnection<PedidoSerializado>();
+      }
+      if (empresaIds) where.empresa_id = { in: empresaIds };
+    }
 
     if (filters.cliente_id) where.cliente_id = filters.cliente_id;
     if (filters.producto) where.producto = filters.producto;

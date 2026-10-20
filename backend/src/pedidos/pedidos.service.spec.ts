@@ -6,6 +6,8 @@ import { Producto, TipoEmpaque } from '../graphql/enums';
 
 const decimal = (value: number) => ({ toNumber: () => value });
 
+const empleado = { id: 'user-1', rol: 'empleado' };
+
 describe('PedidosService', () => {
   let service: PedidosService;
   let prisma: {
@@ -112,12 +114,12 @@ describe('PedidosService', () => {
     it('returns an empty page when user has no associated empresas', async () => {
       prisma.userEmpresa.findMany.mockResolvedValue([]);
 
-      const res = await service.listForUser('user-1', {});
+      const res = await service.listForUser(empleado, {});
 
       expect(res.edges).toEqual([]);
       expect(res.pageInfo.hasNextPage).toBe(false);
       expect(prisma.userEmpresa.findMany).toHaveBeenCalledWith({
-        where: { user_id: 'user-1' },
+        where: { user_id: 'user-1', empresa: { deleted_at: null } },
       });
       expect(prisma.pedido.findMany).not.toHaveBeenCalled();
     });
@@ -139,7 +141,7 @@ describe('PedidosService', () => {
         },
       ]);
 
-      const res = await service.listForUser('user-1', {
+      const res = await service.listForUser(empleado, {
         fecha_inicio: '2026-03-01',
         fecha_fin: '2026-03-31',
         cliente_id: 'cliente-1',
@@ -172,7 +174,7 @@ describe('PedidosService', () => {
       ]);
       prisma.pedido.findMany.mockResolvedValue([]);
 
-      await service.listForUser('user-1', {});
+      await service.listForUser(empleado, {});
 
       expect(prisma.pedido.findMany).toHaveBeenCalledWith({
         where: {
@@ -201,13 +203,13 @@ describe('PedidosService', () => {
       ]);
       prisma.pedido.count.mockResolvedValue(5);
 
-      const first = await service.listForUser('user-1', {}, { first: 2 });
+      const first = await service.listForUser(empleado, {}, { first: 2 });
       expect(first.edges).toHaveLength(2);
       expect(first.pageInfo.hasNextPage).toBe(true);
       expect(first.totalCount).toBe(5);
 
       await service.listForUser(
-        'user-1',
+        empleado,
         {},
         {
           first: 2,
@@ -216,6 +218,39 @@ describe('PedidosService', () => {
       );
       expect(prisma.pedido.findMany).toHaveBeenLastCalledWith(
         expect.objectContaining({ take: 3, skip: 1, cursor: { id: 'p4' } }),
+      );
+    });
+  });
+
+  describe('listForUser with empresa_id', () => {
+    it('narrows to the selected empresa when the user belongs to it', async () => {
+      prisma.userEmpresa.findUnique.mockResolvedValue({ id: 'link' });
+      prisma.pedido.findMany.mockResolvedValue([]);
+
+      await service.listForUser(empleado, { empresa_id: 'empresa-2' });
+
+      expect(prisma.pedido.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { empresa_id: 'empresa-2' } }),
+      );
+    });
+
+    it('forbids an empresa the user does not belong to', async () => {
+      prisma.userEmpresa.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.listForUser(empleado, { empresa_id: 'empresa-x' }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.pedido.findMany).not.toHaveBeenCalled();
+    });
+
+    it('lets admins list any empresa', async () => {
+      prisma.pedido.findMany.mockResolvedValue([]);
+
+      await service.listForUser({ id: 'admin', rol: 'admin' }, {});
+
+      expect(prisma.userEmpresa.findMany).not.toHaveBeenCalled();
+      expect(prisma.pedido.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: {} }),
       );
     });
   });

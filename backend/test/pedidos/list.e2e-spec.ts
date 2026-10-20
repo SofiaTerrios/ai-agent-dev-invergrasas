@@ -16,12 +16,16 @@ describe('GET /api/pedidos (e2e)', () => {
   let prisma: PrismaService;
   let token: string;
   let clienteA: string;
+  let empresaId: string;
+  let otraEmpresaId: string;
   const ids: Record<string, string> = {};
 
   beforeAll(async () => {
     ({ app, prisma } = await createE2EApp());
     const empresa = (await createEmpresa(prisma)).id;
     const otraEmpresa = (await createEmpresa(prisma)).id;
+    empresaId = empresa;
+    otraEmpresaId = otraEmpresa;
     clienteA = (await createCliente(prisma, empresa)).id;
     const clienteB = (await createCliente(prisma, empresa)).id;
     const clienteOtra = (await createCliente(prisma, otraEmpresa)).id;
@@ -82,6 +86,18 @@ describe('GET /api/pedidos (e2e)', () => {
     );
     expect(page.edges.map((e) => e.node.id)).toEqual([ids.marzoRbdA]);
     expect(page.totalCount).toBe(1);
+  });
+
+  it('narrows to the active empresa', async () => {
+    const page = await list(`?empresa_id=${empresaId}&producto=Oleina`);
+    expect(page.edges.map((e) => e.node.id)).toEqual([ids.marzoOleinaB]);
+  });
+
+  it('returns 403 for an empresa the user does not belong to', async () => {
+    await request(app.getHttpServer())
+      .get(`/api/pedidos?empresa_id=${otraEmpresaId}`)
+      .set(auth(token))
+      .expect(403);
   });
 
   it('returns 400 for invalid filters', async () => {

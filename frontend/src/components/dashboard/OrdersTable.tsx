@@ -13,11 +13,13 @@ import {
 import Button from "../ui/Button";
 import {
   connectionNodes,
+  fetchAllNodes,
   graphqlRequest,
   PAGE_SIZE,
   type Connection,
   type PageInfo,
 } from "@/lib/graphql";
+import { GET_CLIENTES_BY_EMPRESA_QUERY, type Cliente } from "@/graphql/clientes";
 import { getSession } from "@/lib/session";
 
 type OrderItem = {
@@ -30,7 +32,15 @@ type OrderItem = {
   fecha: string;
   cliente?: {
     nombre?: string;
-  };
+  } | null;
+};
+
+type OrdersResult = {
+  key: string;
+  orders: OrderItem[];
+  pageInfo: PageInfo;
+  totalCount: number;
+  error: string | null;
 };
 
 const INITIAL_FILTERS: OrdersFilters = {
@@ -39,39 +49,6 @@ const INITIAL_FILTERS: OrdersFilters = {
   cliente_id: "",
   producto: "",
 };
-
-const MOCK_ORDERS: OrderItem[] = [
-  {
-    id: "pedido-101",
-    empresa_id: "empresa-a",
-    cliente_id: "cli-001",
-    producto: "RBD",
-    tipo_empaque: "Granel",
-    cantidad_kg: 1200,
-    fecha: "2026-05-03",
-    cliente: { nombre: "Alimentos del Norte" },
-  },
-  {
-    id: "pedido-102",
-    empresa_id: "empresa-a",
-    cliente_id: "cli-002",
-    producto: "Oleina",
-    tipo_empaque: "Caneca",
-    cantidad_kg: 860,
-    fecha: "2026-05-05",
-    cliente: { nombre: "Frituras Andinas" },
-  },
-  {
-    id: "pedido-103",
-    empresa_id: "empresa-b",
-    cliente_id: "cli-003",
-    producto: "RBD",
-    tipo_empaque: "Balde",
-    cantidad_kg: 430,
-    fecha: "2026-05-06",
-    cliente: { nombre: "Snacks Capital" },
-  },
-];
 
 const ORDERS_QUERY = `
   query Pedidos($filters: PedidoFiltersInput, $first: Int, $after: String) {
@@ -102,50 +79,54 @@ const ORDERS_QUERY = `
 function formatDate(dateValue: string) {
   const date = new Date(dateValue);
   if (Number.isNaN(date.getTime())) return dateValue;
-  return date.toLocaleDateString("es-CO");
+  // Pedido dates are calendar days stored at UTC midnight
+  return date.toLocaleDateString("es-CO", { timeZone: "UTC" });
 }
 
-function matchesFilters(order: OrderItem, filters: OrdersFilters) {
-  if (filters.producto && order.producto !== filters.producto) return false;
+const errorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : "Error al cargar pedidos";
 
-  if (filters.cliente_id) {
-    const normalizedFilter = filters.cliente_id.toLowerCase();
-    const hasMatch =
-      order.cliente_id.toLowerCase().includes(normalizedFilter) ||
-      (order.cliente?.nombre ?? "").toLowerCase().includes(normalizedFilter);
-    if (!hasMatch) return false;
-  }
+type OrdersTableProps = {
+  // Only pedidos of this empresa; without it, every empresa the user can access
+  empresaId?: string;
+  title?: string;
+  description?: string;
+};
 
-  if (filters.fecha_inicio && new Date(order.fecha) < new Date(filters.fecha_inicio)) {
-    return false;
-  }
-
-  if (filters.fecha_fin) {
-    const endOfDay = new Date(filters.fecha_fin);
-    endOfDay.setHours(23, 59, 59, 999);
-    if (new Date(order.fecha) > endOfDay) return false;
-  }
-
-  return true;
-}
-
-export default function OrdersTable() {
+export default function OrdersTable({
+  empresaId,
+  title = "Pedidos recientes",
+  description = "Estado de la operación diaria por cliente y producto.",
+}: OrdersTableProps) {
   const [filters, setFilters] = useState<OrdersFilters>(INITIAL_FILTERS);
-  const [orders, setOrders] = useState<OrderItem[]>([]);
-  const [source, setSource] = useState<"api" | "mock">("mock");
-  const [loading, setLoading] = useState(true);
-  const [pageInfo, setPageInfo] = useState<PageInfo>({ endCursor: null, hasNextPage: false });
+  const [reloadCount, setReloadCount] = useState(0);
+  const [result, setResult] = useState<OrdersResult | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [clientesState, setClientesState] = useState<{
+    empresaId: string;
+    list: Pick<Cliente, "id" | "nombre">[];
+  }>({ empresaId: "", list: [] });
+
+  // A cliente filter only makes sense within the empresa it belongs to
+  const [filtersEmpresaId, setFiltersEmpresaId] = useState(empresaId);
+  if (filtersEmpresaId !== empresaId) {
+    setFiltersEmpresaId(empresaId);
+    setFilters((current) => ({ ...current, cliente_id: "" }));
+  }
 
   const apiFilters = useMemo(
     () => ({
+      ...(empresaId ? { empresa_id: empresaId } : {}),
       ...(filters.fecha_inicio ? { fecha_inicio: filters.fecha_inicio } : {}),
       ...(filters.fecha_fin ? { fecha_fin: filters.fecha_fin } : {}),
       ...(filters.cliente_id ? { cliente_id: filters.cliente_id } : {}),
       ...(filters.producto ? { producto: filters.producto } : {}),
     }),
-    [filters.fecha_inicio, filters.fecha_fin, filters.cliente_id, filters.producto],
+    [empresaId, filters.fecha_inicio, filters.fecha_fin, filters.cliente_id, filters.producto],
   );
+  const queryKey = JSON.stringify({ apiFilters, reloadCount });
+  const loading = result?.key !== queryKey;
+  const orders = loading ? [] : result.orders;
 
   const fetchOrders = useCallback(
     (after?: string | null) =>
@@ -159,72 +140,88 @@ export default function OrdersTable() {
 
   useEffect(() => {
     let cancelled = false;
-
-    async function loadOrders() {
-      setLoading(true);
-      try {
-        const data = await fetchOrders();
-
-        if (!cancelled) {
-          setOrders(connectionNodes(data.pedidos));
-          setPageInfo(data.pedidos.pageInfo);
-          setSource("api");
-        }
-      } catch {
-        if (!cancelled) {
-          setOrders(MOCK_ORDERS);
-          setPageInfo({ endCursor: null, hasNextPage: false });
-          setSource("mock");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    }
-
-    void loadOrders();
+    fetchOrders()
+      .then((data) => {
+        if (cancelled) return;
+        setResult({
+          key: queryKey,
+          orders: connectionNodes(data.pedidos),
+          pageInfo: data.pedidos.pageInfo,
+          totalCount: data.pedidos.totalCount,
+          error: null,
+        });
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        setResult({
+          key: queryKey,
+          orders: [],
+          pageInfo: { endCursor: null, hasNextPage: false },
+          totalCount: 0,
+          error: errorMessage(error),
+        });
+      });
     return () => {
       cancelled = true;
     };
-  }, [fetchOrders]);
+  }, [fetchOrders, queryKey]);
 
-  const loadMore = async () => {
+  useEffect(() => {
+    if (!empresaId) return;
+    fetchAllNodes<Cliente>(
+      GET_CLIENTES_BY_EMPRESA_QUERY,
+      "clientesByEmpresa",
+      { empresaId },
+      getSession()?.token,
+    )
+      .then((list) => setClientesState({ empresaId, list }))
+      .catch((error: unknown) => console.error("Error loading clientes:", error));
+  }, [empresaId]);
+
+  const clientes = empresaId
+    ? clientesState.empresaId === empresaId
+      ? clientesState.list
+      : []
+    : undefined;
+
+  const loadMore = () => {
+    if (!result) return;
     setLoadingMore(true);
-    try {
-      const data = await fetchOrders(pageInfo.endCursor);
-      setOrders((prev) => [...prev, ...connectionNodes(data.pedidos)]);
-      setPageInfo(data.pedidos.pageInfo);
-    } catch (error) {
-      console.error("Error loading pedidos:", error);
-    } finally {
-      setLoadingMore(false);
-    }
+    fetchOrders(result.pageInfo.endCursor)
+      .then((data) => {
+        setResult((current) =>
+          current && current.key === queryKey
+            ? {
+                ...current,
+                orders: [...current.orders, ...connectionNodes(data.pedidos)],
+                pageInfo: data.pedidos.pageInfo,
+              }
+            : current,
+        );
+      })
+      .catch((error: unknown) => console.error("Error loading pedidos:", errorMessage(error)))
+      .finally(() => setLoadingMore(false));
   };
 
-  const filteredOrders = useMemo(
-    () => orders.filter((order) => matchesFilters(order, filters)),
-    [orders, filters],
-  );
+  const error = loading ? null : result.error;
 
   return (
     <section className="space-y-4 border border-[#DDE8E2] bg-white p-4 shadow-sm md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-black text-[#17251F]">
-            Pedidos recientes
-          </h2>
-          <p className="mt-1 text-sm text-[#486358]">
-            Estado de la operación diaria por cliente y producto.
-          </p>
+          <h2 className="text-2xl font-black text-[#17251F]">{title}</h2>
+          <p className="mt-1 text-sm text-[#486358]">{description}</p>
         </div>
-        <span className="rounded-md bg-[#F2F7F4] px-3 py-1 text-xs font-semibold text-[#2F473D]">
-          Fuente: {source === "api" ? "API" : "Mock"}
-        </span>
+        {!loading && !error && (
+          <span className="rounded-md bg-[#F2F7F4] px-3 py-1 text-xs font-semibold text-[#2F473D]">
+            {result.totalCount} {result.totalCount === 1 ? "pedido" : "pedidos"}
+          </span>
+        )}
       </div>
 
       <FiltersPanel
         filters={filters}
+        clientes={clientes}
         onChange={(name, value) => {
           setFilters((current) => ({ ...current, [name]: value }));
         }}
@@ -234,8 +231,17 @@ export default function OrdersTable() {
       />
 
       {loading ? (
-        <div className="border border-dashed border-[#D5E1DB] p-6 text-sm text-[#486358]">
+        <div className="flex items-center gap-3 border border-dashed border-[#D5E1DB] p-6 text-sm text-[#486358]">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#0F6E2E] border-t-transparent" />
           Cargando pedidos...
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center gap-4 rounded-lg border border-[#DDE8E2] p-8 text-center">
+          <p className="text-lg font-bold text-[#17251F]">Oops, algo salió mal</p>
+          <p className="text-sm text-[#6B7F75]">{error}</p>
+          <Button onClick={() => setReloadCount((n) => n + 1)} className="w-auto px-8">
+            Reintentar
+          </Button>
         </div>
       ) : (
         <Table aria-label="Tabla de pedidos">
@@ -246,20 +252,19 @@ export default function OrdersTable() {
               <TableHeaderCell scope="col">Producto</TableHeaderCell>
               <TableHeaderCell scope="col">Empaque</TableHeaderCell>
               <TableHeaderCell scope="col" className="text-right">
-                Cantidad (kg)
+                Total (kg)
               </TableHeaderCell>
-              <TableHeaderCell scope="col">Empresa</TableHeaderCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredOrders.length === 0 ? (
+            {orders.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-[#486358]">
+                <TableCell colSpan={5} className="text-center text-[#486358]">
                   No hay pedidos para los filtros seleccionados.
                 </TableCell>
               </TableRow>
             ) : (
-              filteredOrders.map((order) => (
+              orders.map((order) => (
                 <TableRow key={order.id}>
                   <TableCell>{formatDate(order.fecha)}</TableCell>
                   <TableCell>{order.cliente?.nombre ?? order.cliente_id}</TableCell>
@@ -268,7 +273,6 @@ export default function OrdersTable() {
                   <TableCell className="text-right">
                     {Number(order.cantidad_kg).toLocaleString("es-CO")}
                   </TableCell>
-                  <TableCell>{order.empresa_id}</TableCell>
                 </TableRow>
               ))
             )}
@@ -276,7 +280,7 @@ export default function OrdersTable() {
         </Table>
       )}
 
-      {!loading && pageInfo.hasNextPage && (
+      {!loading && !error && result.pageInfo.hasNextPage && (
         <div className="flex justify-center">
           <Button
             variant="secondary"
@@ -284,7 +288,7 @@ export default function OrdersTable() {
             isLoading={loadingMore}
             className="w-auto px-8"
           >
-            Cargar más pedidos
+            Cargar más pedidos ({orders.length} de {result.totalCount})
           </Button>
         </div>
       )}
