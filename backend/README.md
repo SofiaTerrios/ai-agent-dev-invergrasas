@@ -57,14 +57,14 @@ $ npm run test:e2e
 $ npm run test:cov
 ```
 
-The e2e suites built on the Nest app (`test/utils/e2e.ts`) run against a real
-Postgres and truncate its tables, so point `DATABASE_URL` to a throwaway
-database with the migrations applied:
+The e2e suites (`test/`) boot the Nest app against a real Postgres and
+truncate its tables, so point `DATABASE_URL` to a throwaway database with the
+migrations applied:
 
 ```bash
 $ export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/invergrasas_test
 $ npx prisma migrate deploy
-$ npx jest --config test/jest-e2e.json --runInBand test/auth/roles test/certificados test/clientes/delete test/clientes/list
+$ npm run test:e2e -- --runInBand
 ```
 
 ## Deployment

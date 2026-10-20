@@ -1,4 +1,3 @@
-import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import {
   Injectable,
@@ -9,33 +8,6 @@ import {
 import { GqlExecutionContext } from '@nestjs/graphql';
 
 const JWT_SECRET = process.env.JWT_SECRET ?? 'inver-secret';
-
-// Middleware for legacy REST controllers
-export const jwtAuthMiddleware = (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
-  const authHeader = req.headers['authorization'] || req.headers['Authorization'];
-  
-  if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ message: 'Unauthorized' });
-  }
-  
-  const token = authHeader.split(' ')[1];
-  try {
-    const payload = jwt.verify(token, JWT_SECRET) as any;
-    (req as any).user = {
-      id: payload.sub,
-      email: payload.email,
-      nombre: payload.nombre,
-      rol: payload.rol,
-    };
-    return next();
-  } catch (err) {
-    return res.status(401).json({ message: 'Unauthorized' });
-  }
-};
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {

@@ -14,6 +14,11 @@ import { CreatePedidoDto } from './dto/create-pedido.dto';
 import { FilterPedidoDto } from './dto/filter-pedido.dto';
 import { UpdatePedidoDto } from './dto/update-pedido.dto';
 
+type PedidoSerializado = Omit<
+  Prisma.PedidoGetPayload<{ include: { cliente: true } }>,
+  'cantidad_kg'
+> & { cantidad_kg: number };
+
 @Injectable()
 export class PedidosService {
   constructor(private prisma: PrismaService) {}
@@ -48,7 +53,7 @@ export class PedidosService {
     const links = await this.prisma.userEmpresa.findMany({
       where: { user_id: userId },
     });
-    if (!links || links.length === 0) return emptyConnection();
+    if (!links || links.length === 0) return emptyConnection<PedidoSerializado>();
 
     const empresaIds = links.map((link) => link.empresa_id);
     const where: Prisma.PedidoWhereInput = {

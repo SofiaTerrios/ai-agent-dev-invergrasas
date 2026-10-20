@@ -7,6 +7,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CertificadosService } from './certificados.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnalisisPdfService } from '../utils/pdf/analisis-pdf.service';
+import { CertificadoTipoDto } from './dto/create-certificado.dto';
 
 const EMPRESA_A = '11111111-1111-1111-1111-111111111111';
 const EMPRESA_B = '22222222-2222-2222-2222-222222222222';
@@ -96,7 +97,7 @@ describe('CertificadosService', () => {
     const response = await service.createAnalisis(
       {
         empresa_id: EMPRESA_A,
-        tipo: 'oleina',
+        tipo: CertificadoTipoDto.oleina,
         empresa_cliente: 'YOKO SNACKS',
         nit_cliente: '901.486.714',
         lote: '19-0426',

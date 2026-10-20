@@ -2,6 +2,8 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
+import { randomUUID } from 'crypto';
+import { Rol } from '@prisma/client';
 import { AppModule } from '../../src/app.module';
 import { PrismaService } from '../../src/prisma/prisma.service';
 
@@ -59,3 +61,42 @@ export function gql(
   if (token) req.set('Authorization', `Bearer ${token}`);
   return req.send({ query, variables });
 }
+
+export async function createUser(
+  prisma: PrismaService,
+  rol: Rol,
+  empresaIds: string[] = [],
+) {
+  const user = await prisma.user.create({
+    data: {
+      nombre: `Usuario ${rol}`,
+      email: `${rol}-${randomUUID()}@e2e.test`,
+      password: 'x',
+      rol,
+    },
+  });
+  for (const empresa_id of empresaIds) {
+    await prisma.userEmpresa.create({ data: { user_id: user.id, empresa_id } });
+  }
+  return { user, token: tokenFor(user) };
+}
+
+export function createEmpresa(prisma: PrismaService, nit: string = randomUUID()) {
+  return prisma.empresa.create({
+    data: { razon_social: `Empresa ${nit}`, nit },
+  });
+}
+
+export function createCliente(prisma: PrismaService, empresa_id: string) {
+  return prisma.cliente.create({
+    data: {
+      nombre: `Cliente ${randomUUID()}`,
+      contacto: 'Contacto',
+      telefono: '123',
+      correo: 'cliente@e2e.test',
+      empresa_id,
+    },
+  });
+}
+
+export const auth = (token: string) => ({ Authorization: `Bearer ${token}` });

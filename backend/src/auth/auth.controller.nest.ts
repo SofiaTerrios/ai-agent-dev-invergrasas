@@ -1,4 +1,13 @@
-import { Controller, Post, Body, Get, Req } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Req,
+  UnauthorizedException,
+} from '@nestjs/common';
 import type { Request } from 'express';
 import { getUserFromContext } from '../graphql/graphql-auth';
 import { AuthService } from './auth.service';
@@ -27,9 +36,10 @@ export class AuthControllerNest {
   }
 
   @Post('login')
+  @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginUserDto) {
     const user = await this.authService.validateUser(dto.email, dto.password);
-    if (!user) return { status: 401 };
+    if (!user) throw new UnauthorizedException('Credenciales invalidas');
     return this.authService.login(user);
   }
 

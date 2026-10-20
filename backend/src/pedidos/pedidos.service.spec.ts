@@ -2,6 +2,7 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PedidosService } from './pedidos.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { Producto, TipoEmpaque } from '../graphql/enums';
 
 const decimal = (value: number) => ({ toNumber: () => value });
 
@@ -57,8 +58,8 @@ describe('PedidosService', () => {
     const payload = {
       empresa_id: '11111111-1111-1111-1111-111111111111',
       cliente_id: '22222222-2222-2222-2222-222222222222',
-      producto: 'RBD' as const,
-      tipo_empaque: 'Granel' as const,
+      producto: Producto.RBD,
+      tipo_empaque: TipoEmpaque.Granel,
       cantidad_kg: 100.5,
       fecha: '2026-02-01',
     };
@@ -97,8 +98,8 @@ describe('PedidosService', () => {
         {
           empresa_id: '00000000-0000-0000-0000-000000000000',
           cliente_id: '11111111-1111-1111-1111-111111111111',
-          producto: 'RBD',
-          tipo_empaque: 'Granel',
+          producto: Producto.RBD,
+          tipo_empaque: TipoEmpaque.Granel,
           cantidad_kg: 100,
           fecha: '2026-02-01',
         },
