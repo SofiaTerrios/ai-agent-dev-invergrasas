@@ -1,4 +1,8 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PedidosService } from './pedidos.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -75,10 +79,14 @@ describe('PedidosService', () => {
     };
 
     prisma.empresa.findUnique.mockResolvedValue({ id: payload.empresa_id });
-    prisma.cliente.findUnique.mockResolvedValue({ id: payload.cliente_id });
+    prisma.userEmpresa.findUnique.mockResolvedValue({ id: 'link' });
+    prisma.cliente.findUnique.mockResolvedValue({
+      id: payload.cliente_id,
+      empresa_id: payload.empresa_id,
+    });
     prisma.pedido.create.mockResolvedValue(saved);
 
-    const res = await service.create(payload, 'user-1');
+    const res = await service.create(payload, empleado);
 
     expect(prisma.pedido.create).toHaveBeenCalledWith({
       data: {
@@ -105,9 +113,64 @@ describe('PedidosService', () => {
           cantidad_kg: 100,
           fecha: '2026-02-01',
         },
-        'user-1',
+        empleado,
       ),
     ).rejects.toThrow(NotFoundException);
+  });
+
+  describe('create/update ownership checks', () => {
+    const input = {
+      empresa_id: 'empresa-1',
+      cliente_id: 'cliente-1',
+      producto: Producto.RBD,
+      tipo_empaque: TipoEmpaque.Granel,
+      cantidad_kg: 10,
+      fecha: '2026-02-01',
+    };
+
+    beforeEach(() => {
+      prisma.empresa.findUnique.mockResolvedValue({ id: 'empresa-1' });
+    });
+
+    it('rejects creating a pedido in an empresa the user does not belong to', async () => {
+      prisma.userEmpresa.findUnique.mockResolvedValue(null);
+
+      await expect(service.create(input, empleado)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(prisma.pedido.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects a cliente from another empresa when creating', async () => {
+      prisma.userEmpresa.findUnique.mockResolvedValue({ id: 'link' });
+      prisma.cliente.findUnique.mockResolvedValue({
+        id: 'cliente-1',
+        empresa_id: 'empresa-2',
+      });
+
+      await expect(service.create(input, empleado)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(prisma.pedido.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects moving a pedido to a cliente of another empresa', async () => {
+      prisma.pedido.findUnique.mockResolvedValue({
+        id: 'pedido-1',
+        empresa_id: 'empresa-1',
+        cliente_id: 'cliente-1',
+      });
+      prisma.userEmpresa.findUnique.mockResolvedValue({ id: 'link' });
+      prisma.cliente.findUnique.mockResolvedValue({
+        id: 'cliente-x',
+        empresa_id: 'empresa-2',
+      });
+
+      await expect(
+        service.update('pedido-1', { cliente_id: 'cliente-x' }, empleado),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.pedido.update).not.toHaveBeenCalled();
+    });
   });
 
   describe('listForUser', () => {
