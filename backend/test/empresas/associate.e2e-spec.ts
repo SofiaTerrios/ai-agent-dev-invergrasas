@@ -33,14 +33,14 @@ describe('Empresas E2E - associate user', () => {
     const res = await associate(empresaId, { userId })
       .set(auth(token))
       .expect(201);
-    expect(res.body.message).toBe('Association created successfully');
+    expect(res.body).toEqual({ message: 'Association created successfully' });
   });
 
   it('ignores duplicates silently', async () => {
     const res = await associate(empresaId, { userId })
       .set(auth(token))
       .expect(201);
-    expect(res.body.message).toBe('Already associated');
+    expect(res.body).toEqual({ message: 'Already associated' });
   });
 
   it('fails with 401 without token', async () => {
@@ -66,6 +66,6 @@ describe('Empresas E2E - associate user', () => {
       .get('/api/empresas')
       .set(auth(userToken))
       .expect(200);
-    expect(res.body.edges[0].node.id).toBe(empresaId);
+    expect(res.body).toMatchObject({ edges: [{ node: { id: empresaId } }] });
   });
 });

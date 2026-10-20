@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import FormError from "@/components/ui/FormError";
@@ -49,19 +49,23 @@ export default function EditEmpresaModal({
   const [submitError, setSubmitError] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    if (empresa && isOpen) {
+  // Reset the form each time the modal opens for a empresa
+  const openFor = isOpen ? empresa : undefined;
+  const [syncedFor, setSyncedFor] = useState(openFor);
+  if (openFor !== syncedFor) {
+    setSyncedFor(openFor);
+    if (openFor) {
       setValues({
-        razon_social: empresa.razon_social,
-        nit: empresa.nit,
-        direccion: empresa.direccion,
-        telefono: empresa.telefono,
-        correo: empresa.correo,
+        razon_social: openFor.razon_social,
+        nit: openFor.nit,
+        direccion: openFor.direccion,
+        telefono: openFor.telefono,
+        correo: openFor.correo,
       });
       setErrors({});
       setSubmitError("");
     }
-  }, [empresa, isOpen]);
+  }
 
   const onChange = (field: keyof FormValues, value: string) => {
     setValues((prev) => ({ ...prev, [field]: value }));

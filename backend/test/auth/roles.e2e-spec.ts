@@ -61,7 +61,7 @@ describe('RBAC E2E', () => {
       const res = await gql(app, tokens.empleado, CREATE_EMPRESA, {
         input: { razon_social: 'X', nit: 'RBAC-X' },
       });
-      expect(res.body.errors?.[0]?.extensions?.code).toBe('FORBIDDEN');
+      expect(res.errors?.[0]?.extensions?.code).toBe('FORBIDDEN');
       expect(await prisma.empresa.count({ where: { nit: 'RBAC-X' } })).toBe(0);
     });
 
@@ -69,24 +69,24 @@ describe('RBAC E2E', () => {
       const res = await gql(app, tokens.admin, CREATE_EMPRESA, {
         input: { razon_social: 'Y', nit: 'RBAC-Y' },
       });
-      expect(res.body.errors).toBeUndefined();
+      expect(res.errors).toBeUndefined();
 
       const cliente = await gql(app, tokens.comercial, CREATE_CLIENTE, {
         input: clienteInput('comercial'),
       });
-      expect(cliente.body.errors).toBeUndefined();
+      expect(cliente.errors).toBeUndefined();
     });
 
     it('keeps calidad out of clientes writes', async () => {
       const res = await gql(app, tokens.calidad, CREATE_CLIENTE, {
         input: clienteInput('calidad'),
       });
-      expect(res.body.errors?.[0]?.extensions?.code).toBe('FORBIDDEN');
+      expect(res.errors?.[0]?.extensions?.code).toBe('FORBIDDEN');
     });
 
     it('requires authentication', async () => {
       const res = await gql(app, null, `query { empresas { totalCount } }`);
-      expect(res.body.errors?.[0]?.extensions?.code).toBe('UNAUTHENTICATED');
+      expect(res.errors?.[0]?.extensions?.code).toBe('UNAUTHENTICATED');
     });
   });
 
@@ -132,8 +132,13 @@ describe('RBAC E2E', () => {
     });
 
     it('self-registration creates empleados', async () => {
-      const res = await gql(app, null, REGISTER, input('nuevo@rbac.test'));
-      expect(res.body.data.register.rol).toBe('empleado');
+      const res = await gql<{ register: { rol: string } }>(
+        app,
+        null,
+        REGISTER,
+        input('nuevo@rbac.test'),
+      );
+      expect(res.data.register.rol).toBe('empleado');
     });
 
     it('does not allow self-registering as admin', async () => {
@@ -143,7 +148,7 @@ describe('RBAC E2E', () => {
         REGISTER,
         input('hacker@rbac.test', 'admin'),
       );
-      expect(res.body.errors?.[0]?.extensions?.code).toBe('FORBIDDEN');
+      expect(res.errors?.[0]?.extensions?.code).toBe('FORBIDDEN');
       expect(
         await prisma.user.count({ where: { email: 'hacker@rbac.test' } }),
       ).toBe(0);
@@ -154,13 +159,18 @@ describe('RBAC E2E', () => {
         userId: ids.empleado,
         rol: 'admin',
       });
-      expect(denied.body.errors?.[0]?.extensions?.code).toBe('FORBIDDEN');
+      expect(denied.errors?.[0]?.extensions?.code).toBe('FORBIDDEN');
 
-      const ok = await gql(app, tokens.admin, UPDATE_ROL, {
-        userId: ids.empleado,
-        rol: 'calidad',
-      });
-      expect(ok.body.data.updateUserRol.rol).toBe('calidad');
+      const ok = await gql<{ updateUserRol: { rol: string } }>(
+        app,
+        tokens.admin,
+        UPDATE_ROL,
+        {
+          userId: ids.empleado,
+          rol: 'calidad',
+        },
+      );
+      expect(ok.data.updateUserRol.rol).toBe('calidad');
     });
   });
 });

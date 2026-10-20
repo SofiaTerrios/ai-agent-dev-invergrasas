@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CertificadoTipo, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { existsSync } from 'fs';
 import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
@@ -90,7 +90,7 @@ export class CertificadosService {
       data: {
         empresa_id: dto.empresa_id,
         cliente_id: dto.cliente_id ?? null,
-        tipo: dto.tipo as CertificadoTipo,
+        tipo: dto.tipo,
         empresa_cliente: dto.empresa_cliente,
         nit_cliente: dto.nit_cliente ?? null,
         lote: dto.lote,
@@ -114,7 +114,7 @@ export class CertificadosService {
     const archivoUrl =
       await this.analisisPdfService.generateCertificadoAnalisisPdf({
         certificadoId: certificado.id,
-        tipo: dto.tipo as 'oleina' | 'rbd',
+        tipo: dto.tipo,
         empresa_cliente: dto.empresa_cliente,
         nit_cliente: dto.nit_cliente ?? null,
         lote: dto.lote,

@@ -46,9 +46,11 @@ describe('Pedidos E2E - create', () => {
   });
 
   it('creates pedido with valid data', async () => {
-    const res = await gql(app, token, CREATE, { input: input() });
-    expect(res.body.errors).toBeUndefined();
-    expect(res.body.data.createPedido).toMatchObject({
+    const res = await gql<{ createPedido: unknown }>(app, token, CREATE, {
+      input: input(),
+    });
+    expect(res.errors).toBeUndefined();
+    expect(res.data.createPedido).toMatchObject({
       producto: 'RBD',
       tipo_empaque: 'Granel',
       cantidad_kg: 100.5,
@@ -61,26 +63,26 @@ describe('Pedidos E2E - create', () => {
     const res = await gql(app, token, CREATE, {
       input: input({ empresa_id: '00000000-0000-4000-8000-000000000000' }),
     });
-    expect(res.body.errors?.[0]?.message).toBe('Empresa not found');
+    expect(res.errors?.[0]?.message).toBe('Empresa not found');
   });
 
   it('returns NOT_FOUND for a non-existent cliente', async () => {
     const res = await gql(app, token, CREATE, {
       input: input({ cliente_id: '00000000-0000-4000-8000-000000000000' }),
     });
-    expect(res.body.errors?.[0]?.message).toBe('Cliente not found');
+    expect(res.errors?.[0]?.message).toBe('Cliente not found');
   });
 
   it('rejects invalid enum values', async () => {
     const res = await gql(app, token, CREATE, {
       input: input({ producto: 'Aceite' }),
     });
-    expect(res.body.errors).toBeDefined();
+    expect(res.errors).toBeDefined();
     expect(await prisma.pedido.count()).toBe(1);
   });
 
   it('requires authentication', async () => {
     const res = await gql(app, null, CREATE, { input: input() });
-    expect(res.body.errors?.[0]?.extensions?.code).toBe('UNAUTHENTICATED');
+    expect(res.errors?.[0]?.extensions?.code).toBe('UNAUTHENTICATED');
   });
 });

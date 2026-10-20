@@ -7,7 +7,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CertificadosService } from './certificados.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnalisisPdfService } from '../utils/pdf/analisis-pdf.service';
-import { CertificadoTipoDto } from './dto/create-certificado.dto';
+import {
+  CertificadoTipoDto,
+  CreateCertificadoDto,
+} from './dto/create-certificado.dto';
 
 const EMPRESA_A = '11111111-1111-1111-1111-111111111111';
 const EMPRESA_B = '22222222-2222-2222-2222-222222222222';
@@ -36,35 +39,38 @@ const rbdInput = (overrides: Record<string, unknown> = {}) =>
       color_rojo: '3,0',
     },
     ...overrides,
-  }) as any;
+  }) as CreateCertificadoDto;
+
+const createPrismaMock = () => ({
+  certificadoAnalisis: {
+    create: jest.fn(),
+    update: jest.fn(),
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    count: jest.fn().mockResolvedValue(0),
+  },
+  cliente: { findUnique: jest.fn() },
+  userEmpresa: {
+    findUnique: jest.fn().mockResolvedValue({ id: 'link' }),
+    findMany: jest.fn().mockResolvedValue([{ empresa_id: EMPRESA_A }]),
+  },
+  parametroAnalisis: {
+    createMany: jest.fn(),
+  },
+});
+
+const createPdfMock = () => ({
+  generateCertificadoAnalisisPdf: jest.fn(),
+});
 
 describe('CertificadosService', () => {
   let service: CertificadosService;
-  let prismaMock: any;
-  let pdfMock: any;
+  let prismaMock: ReturnType<typeof createPrismaMock>;
+  let pdfMock: ReturnType<typeof createPdfMock>;
 
   beforeEach(async () => {
-    prismaMock = {
-      certificadoAnalisis: {
-        create: jest.fn(),
-        update: jest.fn(),
-        findUnique: jest.fn(),
-        findMany: jest.fn(),
-        count: jest.fn().mockResolvedValue(0),
-      },
-      cliente: { findUnique: jest.fn() },
-      userEmpresa: {
-        findUnique: jest.fn().mockResolvedValue({ id: 'link' }),
-        findMany: jest.fn().mockResolvedValue([{ empresa_id: EMPRESA_A }]),
-      },
-      parametroAnalisis: {
-        createMany: jest.fn(),
-      },
-    };
-
-    pdfMock = {
-      generateCertificadoAnalisisPdf: jest.fn(),
-    };
+    prismaMock = createPrismaMock();
+    pdfMock = createPdfMock();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -148,7 +154,7 @@ describe('CertificadosService', () => {
             color_amarillo: '30,0',
             color_rojo: '3,0',
           },
-        } as any,
+        } as CreateCertificadoDto,
         empleado,
       ),
     ).rejects.toThrow(BadRequestException);
@@ -174,7 +180,7 @@ describe('CertificadosService', () => {
             color_amarillo: '30,0',
             color_rojo: '3,0',
           },
-        } as any,
+        } as CreateCertificadoDto,
         empleado,
       ),
     ).rejects.toThrow(BadRequestException);
@@ -200,7 +206,7 @@ describe('CertificadosService', () => {
             color_amarillo: '30,0',
             color_rojo: '3,0',
           },
-        } as any,
+        } as CreateCertificadoDto,
         empleado,
       ),
     ).rejects.toThrow(BadRequestException);

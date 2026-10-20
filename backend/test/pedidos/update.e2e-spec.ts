@@ -54,14 +54,20 @@ describe('Pedidos E2E - update', () => {
     token: string | null,
     id: string,
     input: Record<string, unknown>,
-  ) => gql(app, token, UPDATE, { id, input });
+  ) =>
+    gql<{ updatePedido: { cantidad_kg: number; tipo_empaque: string } }>(
+      app,
+      token,
+      UPDATE,
+      { id, input },
+    );
 
   it('updates an existing pedido', async () => {
     const res = await update(empleadoToken, pedidoId, {
       cantidad_kg: 250.5,
       tipo_empaque: 'Caneca',
     });
-    expect(res.body.data.updatePedido).toMatchObject({
+    expect(res.data.updatePedido).toMatchObject({
       cantidad_kg: 250.5,
       tipo_empaque: 'Caneca',
     });
@@ -71,12 +77,12 @@ describe('Pedidos E2E - update', () => {
     const res = await update(empleadoToken, pedidoId, {
       tipo_empaque: 'Bolsa',
     });
-    expect(res.body.errors).toBeDefined();
+    expect(res.errors).toBeDefined();
   });
 
   it('rejects a negative cantidad_kg', async () => {
     const res = await update(empleadoToken, pedidoId, { cantidad_kg: -1 });
-    expect(res.body.errors?.[0]?.extensions?.code).toBe('BAD_REQUEST');
+    expect(res.errors?.[0]?.extensions?.code).toBe('BAD_REQUEST');
   });
 
   it('returns NOT_FOUND for a missing pedido', async () => {
@@ -87,21 +93,21 @@ describe('Pedidos E2E - update', () => {
         cantidad_kg: 1,
       },
     );
-    expect(res.body.errors?.[0]?.message).toBe('Pedido not found');
+    expect(res.errors?.[0]?.message).toBe('Pedido not found');
   });
 
   it('requires authentication', async () => {
     const res = await update(null, pedidoId, { cantidad_kg: 1 });
-    expect(res.body.errors?.[0]?.extensions?.code).toBe('UNAUTHENTICATED');
+    expect(res.errors?.[0]?.extensions?.code).toBe('UNAUTHENTICATED');
   });
 
   it('forbids employees outside the pedido empresa', async () => {
     const res = await update(otroToken, pedidoId, { cantidad_kg: 1 });
-    expect(res.body.errors?.[0]?.extensions?.code).toBe('FORBIDDEN');
+    expect(res.errors?.[0]?.extensions?.code).toBe('FORBIDDEN');
   });
 
   it('lets admins update without empresa association', async () => {
     const res = await update(adminToken, pedidoId, { cantidad_kg: 300 });
-    expect(res.body.data.updatePedido.cantidad_kg).toBe(300);
+    expect(res.data.updatePedido.cantidad_kg).toBe(300);
   });
 });

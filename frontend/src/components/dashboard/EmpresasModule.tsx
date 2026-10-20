@@ -43,49 +43,56 @@ export default function EmpresasModule() {
     }
   }, [session, isAdmin, router]);
 
-  // Load empresas
-  // Loads the first page, or appends the next one when `after` is given
-  const loadEmpresas = useCallback(async (after?: string) => {
+  // Loads the first page, or appends the next one when `after` is given.
+  // State is only set in promise callbacks, so it can run from an effect.
+  const fetchEmpresas = useCallback(
+    (after?: string) =>
+      graphqlRequest<{ empresas: Connection<Empresa> }>(
+        GET_EMPRESAS_QUERY,
+        { first: PAGE_SIZE, after },
+        token,
+      )
+        .then((data) => {
+          const page = connectionNodes(data.empresas);
+          setEmpresas((prev) => (after ? [...prev, ...page] : page));
+          setPageInfo(data.empresas.pageInfo);
+          setTotalCount(data.empresas.totalCount);
+        })
+        .catch((error: unknown) => {
+          const errorMessage = error instanceof Error ? error.message : "Error al cargar empresas";
+          console.error("Error loading empresas:", errorMessage);
+      
+          if (errorMessage.includes("Invalid token") || errorMessage.includes("Unauthorized")) {
+            setError("Sesión expirada. Por favor, inicia sesión nuevamente.");
+            setTimeout(() => router.push("/login"), 2000);
+          } else {
+            setError(errorMessage);
+          }
+        })
+        .finally(() => {
+          setIsLoading(false);
+          setIsLoadingMore(false);
+        }),
+    [token, router],
+  );
+
+  const loadEmpresas = (after?: string) => {
     if (!token) {
       setError("Token no disponible. Por favor, inicia sesión nuevamente.");
       setIsLoading(false);
       return;
     }
-
     if (after) setIsLoadingMore(true);
     else setIsLoading(true);
     setError("");
-    try {
-      const data = await graphqlRequest<{ empresas: Connection<Empresa> }>(
-        GET_EMPRESAS_QUERY,
-        { first: PAGE_SIZE, after },
-        token
-      );
-      const page = connectionNodes(data.empresas);
-      setEmpresas((prev) => (after ? [...prev, ...page] : page));
-      setPageInfo(data.empresas.pageInfo);
-      setTotalCount(data.empresas.totalCount);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Error al cargar empresas";
-      console.error("Error loading empresas:", errorMessage);
-      
-      if (errorMessage.includes("Invalid token") || errorMessage.includes("Unauthorized")) {
-        setError("Sesión expirada. Por favor, inicia sesión nuevamente.");
-        setTimeout(() => router.push("/login"), 2000);
-      } else {
-        setError(errorMessage);
-      }
-    } finally {
-      setIsLoading(false);
-      setIsLoadingMore(false);
-    }
-  }, [token, router]);
+    void fetchEmpresas(after);
+  };
 
   useEffect(() => {
     if (isAdmin && token) {
-      loadEmpresas();
+      void fetchEmpresas();
     }
-  }, [isAdmin, token, loadEmpresas]);
+  }, [isAdmin, token, fetchEmpresas]);
 
   // Show loading while checking auth
   if (!session) {

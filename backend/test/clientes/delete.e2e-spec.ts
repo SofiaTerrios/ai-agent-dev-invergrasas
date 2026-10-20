@@ -59,14 +59,14 @@ describe('Clientes E2E - Delete (soft delete)', () => {
     expect(row).not.toBeNull();
     expect(row!.deleted_at).toBeInstanceOf(Date);
 
-    const res = await gql(
+    const res = await gql<{ clientesByEmpresa: unknown }>(
       app,
       token,
       `query($empresaId: ID!) { clientesByEmpresa(empresaId: $empresaId) { edges { node { id } } totalCount } }`,
       { empresaId },
     );
-    expect(res.body.errors).toBeUndefined();
-    expect(res.body.data.clientesByEmpresa).toEqual({
+    expect(res.errors).toBeUndefined();
+    expect(res.data.clientesByEmpresa).toEqual({
       edges: [],
       totalCount: 0,
     });
@@ -105,7 +105,7 @@ describe('Clientes E2E - Delete (soft delete)', () => {
       {
         id: cliente.id,
       },
-    ).expect(200);
+    );
 
     expect(
       await prisma.pedido.count({ where: { cliente_id: cliente.id } }),

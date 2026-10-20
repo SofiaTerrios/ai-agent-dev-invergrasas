@@ -143,7 +143,7 @@ describe('PedidosService', () => {
         fecha_inicio: '2026-03-01',
         fecha_fin: '2026-03-31',
         cliente_id: 'cliente-1',
-        producto: 'RBD' as any,
+        producto: Producto.RBD,
       });
 
       expect(prisma.pedido.findMany).toHaveBeenCalledWith({

@@ -22,4 +22,4 @@ async function bootstrap() {
   // Certificado PDFs are not served publicly: use GET /api/certificados/:id/pdf
   await app.listen(process.env.PORT ?? 4000);
 }
-bootstrap();
+void bootstrap();

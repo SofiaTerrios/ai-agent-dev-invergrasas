@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { ConfigModule } from '@nestjs/config';
 import { GraphQLModule } from '@nestjs/graphql';
@@ -21,7 +22,10 @@ import { CertificadosModule } from './certificados/certificados.module';
       driver: ApolloDriver,
       autoSchemaFile: true,
       sortSchema: true,
-      context: ({ req, res }) => ({ req, res }),
+      context: ({ req, res }: { req: Request; res: Response }) => ({
+        req,
+        res,
+      }),
     }),
     PrismaModule,
     AuthModule,

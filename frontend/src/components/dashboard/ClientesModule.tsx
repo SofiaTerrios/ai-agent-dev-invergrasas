@@ -48,49 +48,56 @@ export default function ClientesModule() {
     }
   }, [session, isAdmin, router]);
 
-  // Load clientes
-  // Loads the first page, or appends the next one when `after` is given
-  const loadClientes = useCallback(async (after?: string) => {
+  // Loads the first page, or appends the next one when `after` is given.
+  // State is only set in promise callbacks, so it can run from an effect.
+  const fetchClientes = useCallback(
+    (after?: string) =>
+      graphqlRequest<{ clientes: Connection<Cliente> }>(
+        GET_CLIENTES_QUERY,
+        { first: PAGE_SIZE, after },
+        token,
+      )
+        .then((data) => {
+          const page = connectionNodes(data.clientes);
+          setClientes((prev) => (after ? [...prev, ...page] : page));
+          setPageInfo(data.clientes.pageInfo);
+          setTotalCount(data.clientes.totalCount);
+        })
+        .catch((error: unknown) => {
+          const errorMessage = error instanceof Error ? error.message : "Error al cargar clientes";
+          console.error("Error loading clientes:", errorMessage);
+
+          if (errorMessage.includes("Invalid token") || errorMessage.includes("Unauthorized")) {
+            setError("Sesión expirada. Por favor, inicia sesión nuevamente.");
+            setTimeout(() => router.push("/login"), 2000);
+          } else {
+            setError(errorMessage);
+          }
+        })
+        .finally(() => {
+          setIsLoading(false);
+          setIsLoadingMore(false);
+        }),
+    [token, router],
+  );
+
+  const loadClientes = (after?: string) => {
     if (!token) {
       setError("Token no disponible. Por favor, inicia sesión nuevamente.");
       setIsLoading(false);
       return;
     }
-
     if (after) setIsLoadingMore(true);
     else setIsLoading(true);
     setError("");
-    try {
-      const data = await graphqlRequest<{ clientes: Connection<Cliente> }>(
-        GET_CLIENTES_QUERY,
-        { first: PAGE_SIZE, after },
-        token
-      );
-      const page = connectionNodes(data.clientes);
-      setClientes((prev) => (after ? [...prev, ...page] : page));
-      setPageInfo(data.clientes.pageInfo);
-      setTotalCount(data.clientes.totalCount);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Error al cargar clientes";
-      console.error("Error loading clientes:", errorMessage);
-
-      if (errorMessage.includes("Invalid token") || errorMessage.includes("Unauthorized")) {
-        setError("Sesión expirada. Por favor, inicia sesión nuevamente.");
-        setTimeout(() => router.push("/login"), 2000);
-      } else {
-        setError(errorMessage);
-      }
-    } finally {
-      setIsLoading(false);
-      setIsLoadingMore(false);
-    }
-  }, [token, router]);
+    void fetchClientes(after);
+  };
 
   useEffect(() => {
     if (isAdmin && token) {
-      loadClientes();
+      void fetchClientes();
     }
-  }, [isAdmin, token, loadClientes]);
+  }, [isAdmin, token, fetchClientes]);
 
   // Show loading while checking auth
   if (!session) {

@@ -1,7 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { PrismaService } from '../../src/prisma/prisma.service';
-import { createE2EApp, gql, tokenFor } from '../utils/e2e';
+import { createE2EApp, gql, GqlResponse, tokenFor } from '../utils/e2e';
 
 const LIST = `
   query($empresaId: ID!, $first: Int, $after: String) {
@@ -12,6 +12,14 @@ const LIST = `
     }
   }
 `;
+
+type ClientesPage = {
+  clientesByEmpresa: {
+    edges: { cursor: string; node: { id: string; nombre: string } }[];
+    pageInfo: { endCursor: string | null; hasNextPage: boolean };
+    totalCount: number;
+  };
+};
 
 describe('Clientes E2E - List (cursor pagination)', () => {
   let app: INestApplication;
@@ -68,12 +76,16 @@ describe('Clientes E2E - List (cursor pagination)', () => {
     let pages = 0;
 
     do {
-      const res = await gql(app, token, LIST, { empresaId, first: 2, after });
-      expect(res.body.errors).toBeUndefined();
-      const page = res.body.data.clientesByEmpresa;
+      const res: GqlResponse<ClientesPage> = await gql(app, token, LIST, {
+        empresaId,
+        first: 2,
+        after,
+      });
+      expect(res.errors).toBeUndefined();
+      const page = res.data.clientesByEmpresa;
       expect(page.edges.length).toBeLessThanOrEqual(2);
       expect(page.totalCount).toBe(5);
-      seen.push(...page.edges.map((e: { node: { id: string } }) => e.node.id));
+      seen.push(...page.edges.map((e) => e.node.id));
       after = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
       pages++;
     } while (after);
@@ -84,11 +96,14 @@ describe('Clientes E2E - List (cursor pagination)', () => {
 
   it('never returns more rows than the configured maximum', async () => {
     process.env.PAGINATION_MAX_LIMIT = '3';
-    const res = await gql(app, token, LIST, { empresaId, first: 100 });
+    const res = await gql<ClientesPage>(app, token, LIST, {
+      empresaId,
+      first: 100,
+    });
     delete process.env.PAGINATION_MAX_LIMIT;
 
-    expect(res.body.data.clientesByEmpresa.edges).toHaveLength(3);
-    expect(res.body.data.clientesByEmpresa.pageInfo.hasNextPage).toBe(true);
+    expect(res.data.clientesByEmpresa.edges).toHaveLength(3);
+    expect(res.data.clientesByEmpresa.pageInfo.hasNextPage).toBe(true);
   });
 
   it('rejects an invalid cursor', async () => {
@@ -96,7 +111,7 @@ describe('Clientes E2E - List (cursor pagination)', () => {
       empresaId,
       after: 'not-a-cursor!',
     });
-    expect(res.body.errors?.[0]?.message).toBe('Cursor inválido');
+    expect(res.errors?.[0]?.message).toBe('Cursor inválido');
   });
 
   it('paginates the REST pedidos listing via query params', async () => {

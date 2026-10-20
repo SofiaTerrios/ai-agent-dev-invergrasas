@@ -9,7 +9,6 @@ import {
   FileBadge,
   Building2,
   Users,
-  Settings,
   LogOut,
   X,
 } from "lucide-react";

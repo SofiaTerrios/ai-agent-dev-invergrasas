@@ -28,7 +28,8 @@ describe('Auth E2E - login', () => {
       .send({ email: user.email, password: user.password })
       .expect(200);
     expect(login.body).toHaveProperty('access_token');
-    expect(login.body.user).toMatchObject({
+    expect(login.body).toHaveProperty('user');
+    expect((login.body as { user: unknown }).user).toMatchObject({
       email: user.email,
       rol: 'empleado',
     });

@@ -8,9 +8,7 @@ import { User } from '@prisma/client';
 import { Role } from '../graphql/enums';
 import { hashPassword, comparePasswords } from '../utils/hash';
 import { PrismaService } from '../prisma/prisma.service';
-import * as jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET ?? 'inver-secret';
+import { signAccessToken } from './jwt';
 
 @Injectable()
 export class AuthService {
@@ -68,18 +66,18 @@ export class AuthService {
     if (!user) return null;
     const match = await comparePasswords(password, user.password);
     if (!match) return null;
-    const { password: _p, ...rest } = user as any;
-    return rest as Omit<User, 'password'>;
+    const { password: _password, ...rest } = user;
+    return rest;
   }
 
-  async login(user: Partial<User>) {
+  login(user: Pick<User, 'id' | 'email' | 'nombre' | 'rol'>) {
     const payload = {
       sub: user.id,
       email: user.email,
       nombre: user.nombre,
       rol: user.rol,
     };
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' });
+    const token = signAccessToken(payload);
     return {
       access_token: token,
       user: {

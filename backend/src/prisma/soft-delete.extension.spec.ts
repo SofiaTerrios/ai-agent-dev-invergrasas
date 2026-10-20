@@ -1,19 +1,30 @@
 import { softDeleteExtension } from './soft-delete.extension';
 
+type QueryArgs =
+  | { where?: Record<string, unknown>; data?: unknown }
+  | undefined;
+
 type QueryHandler = (params: {
   operation: string;
-  args: any;
-  query: (args: any) => Promise<any>;
-}) => Promise<any>;
+  args: QueryArgs;
+  query: (args: QueryArgs) => Promise<QueryArgs>;
+}) => Promise<QueryArgs>;
+
+type ExtensionDefinition = {
+  query: { $allModels: { $allOperations: QueryHandler } };
+};
 
 // defineExtension returns `(client) => client.$extends(definition)`; a fake
 // client hands the raw definition back so the handler can be called directly.
-const handler = (softDeleteExtension as any)({
-  $extends: (ext: any) => ext,
-}).query.$allModels.$allOperations as QueryHandler;
+const defineOnFakeClient = softDeleteExtension as unknown as (client: {
+  $extends: (definition: ExtensionDefinition) => ExtensionDefinition;
+}) => ExtensionDefinition;
+const handler = defineOnFakeClient({
+  $extends: (definition) => definition,
+}).query.$allModels.$allOperations;
 
-const run = (operation: string, args: any) => {
-  const query = jest.fn(async (a: any) => a);
+const run = (operation: string, args: QueryArgs) => {
+  const query = jest.fn((a: QueryArgs) => Promise.resolve(a));
   return handler({ operation, args, query });
 };
 

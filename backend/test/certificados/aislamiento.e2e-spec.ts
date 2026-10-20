@@ -13,6 +13,10 @@ const CREATE = `
 const LIST = `query { certificados { edges { node { id empresa_id } } } }`;
 const GET = `query($id: ID!) { certificado(id: $id) { id lote parametros { nombre } } }`;
 
+type CertificadosPage = {
+  certificados: { edges: { node: { id: string; empresa_id: string } }[] };
+};
+
 describe('Certificados E2E - aislamiento por empresa', () => {
   let app: INestApplication;
   let prisma: PrismaService;
@@ -86,10 +90,12 @@ describe('Certificados E2E - aislamiento por empresa', () => {
     tokenA = await makeUser('a', empresaA);
     tokenB = await makeUser('b', empresaB);
 
-    const res = await gql(app, tokenA, CREATE, { input: input() });
-    expect(res.body.errors).toBeUndefined();
-    certificadoA = res.body.data.createCertificado.id;
-    expect(res.body.data.createCertificado.archivo_url).toBe(
+    const res = await gql<{
+      createCertificado: { id: string; archivo_url: string };
+    }>(app, tokenA, CREATE, { input: input() });
+    expect(res.errors).toBeUndefined();
+    certificadoA = res.data.createCertificado.id;
+    expect(res.data.createCertificado.archivo_url).toBe(
       `/api/certificados/${certificadoA}/pdf`,
     );
   });
@@ -128,35 +134,37 @@ describe('Certificados E2E - aislamiento por empresa', () => {
     const res = await gql(app, tokenA, CREATE, {
       input: input({ empresa_id: empresaB }),
     });
-    expect(res.body.errors?.[0]?.extensions?.code).toBe('FORBIDDEN');
+    expect(res.errors?.[0]?.extensions?.code).toBe('FORBIDDEN');
   });
 
   it('rejects a cliente from another empresa', async () => {
     const res = await gql(app, tokenA, CREATE, {
       input: input({ cliente_id: clienteB }),
     });
-    expect(res.body.errors?.[0]?.message).toBe(
+    expect(res.errors?.[0]?.message).toBe(
       'El cliente no pertenece a la empresa',
     );
   });
 
   it('lists only the certificados of the user empresa', async () => {
-    const resA = await gql(app, tokenA, LIST);
-    expect(resA.body.data.certificados.edges).toEqual([
+    const resA = await gql<CertificadosPage>(app, tokenA, LIST);
+    expect(resA.data.certificados.edges).toEqual([
       { node: { id: certificadoA, empresa_id: empresaA } },
     ]);
 
-    const resB = await gql(app, tokenB, LIST);
-    expect(resB.body.data.certificados.edges).toEqual([]);
+    const resB = await gql<CertificadosPage>(app, tokenB, LIST);
+    expect(resB.data.certificados.edges).toEqual([]);
   });
 
   it('does not expose a certificado of another empresa', async () => {
-    const own = await gql(app, tokenA, GET, { id: certificadoA });
-    expect(own.body.data.certificado.lote).toBe('L-001');
-    expect(own.body.data.certificado.parametros).toHaveLength(6);
+    const own = await gql<{
+      certificado: { lote: string; parametros: unknown[] };
+    }>(app, tokenA, GET, { id: certificadoA });
+    expect(own.data.certificado.lote).toBe('L-001');
+    expect(own.data.certificado.parametros).toHaveLength(6);
 
     const other = await gql(app, tokenB, GET, { id: certificadoA });
-    expect(other.body.errors?.[0]?.message).toBe('Certificado no encontrado');
+    expect(other.errors?.[0]?.message).toBe('Certificado no encontrado');
   });
 
   it('only lets users of the same empresa download the PDF', async () => {

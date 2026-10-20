@@ -27,7 +27,7 @@ describe('Empresas E2E - update', () => {
       .set(auth(token))
       .send({ direccion: 'New Addr' })
       .expect(200);
-    expect(res.body.direccion).toBe('New Addr');
+    expect(res.body).toMatchObject({ direccion: 'New Addr' });
   });
 
   it('returns 404 when not found', async () => {

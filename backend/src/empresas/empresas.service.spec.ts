@@ -3,26 +3,28 @@ import { Test } from '@nestjs/testing';
 import { EmpresasService } from './empresas.service';
 import { PrismaService } from '../prisma/prisma.service';
 
+const createPrismaMock = () => ({
+  empresa: {
+    findUnique: jest.fn(),
+    findMany: jest.fn().mockResolvedValue([]),
+    count: jest.fn().mockResolvedValue(0),
+    create: jest.fn(),
+    update: jest.fn(),
+  },
+  user: { findUnique: jest.fn() },
+  userEmpresa: {
+    findMany: jest.fn().mockResolvedValue([]),
+    findUnique: jest.fn(),
+    upsert: jest.fn(),
+  },
+});
+
 describe('EmpresasService', () => {
   let service: EmpresasService;
-  let prisma: any;
+  let prisma: ReturnType<typeof createPrismaMock>;
 
   beforeEach(async () => {
-    prisma = {
-      empresa: {
-        findUnique: jest.fn(),
-        findMany: jest.fn().mockResolvedValue([]),
-        count: jest.fn().mockResolvedValue(0),
-        create: jest.fn(),
-        update: jest.fn(),
-      },
-      user: { findUnique: jest.fn() },
-      userEmpresa: {
-        findMany: jest.fn().mockResolvedValue([]),
-        findUnique: jest.fn(),
-        upsert: jest.fn(),
-      },
-    };
+    prisma = createPrismaMock();
 
     const moduleRef = await Test.createTestingModule({
       providers: [

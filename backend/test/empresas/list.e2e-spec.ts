@@ -27,10 +27,10 @@ describe('Empresas E2E - list', () => {
   it('returns only empresas assigned to the user', async () => {
     const { token } = await createUser(prisma, 'empleado', [asignada]);
     const res = await list(token);
-    expect(
-      res.body.edges.map((e: { node: { id: string } }) => e.node.id),
-    ).toEqual([asignada]);
-    expect(res.body.totalCount).toBe(1);
+    expect(res.body).toMatchObject({
+      edges: [{ node: { id: asignada } }],
+      totalCount: 1,
+    });
   });
 
   it('returns an empty page for a user with no empresas', async () => {
@@ -41,7 +41,7 @@ describe('Empresas E2E - list', () => {
 
   it('returns every empresa for admins', async () => {
     const { token } = await createUser(prisma, 'admin');
-    expect((await list(token)).body.totalCount).toBe(2);
+    expect((await list(token)).body).toMatchObject({ totalCount: 2 });
   });
 
   it('returns 401 when unauthenticated', async () => {

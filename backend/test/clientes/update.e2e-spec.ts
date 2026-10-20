@@ -84,11 +84,11 @@ describe('Clientes E2E - update', () => {
       .set(auth(token))
       .send({ empresa_id: other.id })
       .expect(200);
-    expect(res.body.empresa_id).toBe(other.id);
+    expect(res.body).toMatchObject({ empresa_id: other.id });
   });
 
   it('accepts an empty update and returns the cliente', async () => {
     const res = await put(clienteId).set(auth(token)).send({}).expect(200);
-    expect(res.body.id).toBe(clienteId);
+    expect(res.body).toMatchObject({ id: clienteId });
   });
 });

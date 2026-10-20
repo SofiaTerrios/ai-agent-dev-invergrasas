@@ -51,15 +51,19 @@ export function tokenFor(user: {
   );
 }
 
-export function gql(
+export type GqlError = { message: string; extensions?: { code?: string } };
+export type GqlResponse<T> = { data: T; errors?: GqlError[] };
+
+export async function gql<T = unknown>(
   app: INestApplication,
   token: string | null,
   query: string,
   variables?: Record<string, unknown>,
-) {
+): Promise<GqlResponse<T>> {
   const req = request(app.getHttpServer()).post('/graphql');
   if (token) req.set('Authorization', `Bearer ${token}`);
-  return req.send({ query, variables });
+  const res = await req.send({ query, variables });
+  return res.body as GqlResponse<T>;
 }
 
 export async function createUser(
@@ -81,7 +85,10 @@ export async function createUser(
   return { user, token: tokenFor(user) };
 }
 
-export function createEmpresa(prisma: PrismaService, nit: string = randomUUID()) {
+export function createEmpresa(
+  prisma: PrismaService,
+  nit: string = randomUUID(),
+) {
   return prisma.empresa.create({
     data: { razon_social: `Empresa ${nit}`, nit },
   });

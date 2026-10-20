@@ -7,31 +7,36 @@ import jwt from 'jsonwebtoken';
 import { AuthService } from './auth.service';
 import { hashPassword } from '../utils/hash';
 import { Role } from '../graphql/enums';
+import { PrismaService } from '../prisma/prisma.service';
+
+type UserData = Record<string, unknown>;
+
+const createPrismaMock = () => ({
+  user: {
+    findUnique: jest.fn().mockResolvedValue(null),
+    create: jest.fn(({ data }: { data: UserData }) =>
+      Promise.resolve({ id: 'u1', created_at: new Date(), ...data }),
+    ),
+    update: jest.fn(({ data }: { data: UserData }) =>
+      Promise.resolve({
+        id: 'u1',
+        nombre: 'T',
+        email: 't@example.com',
+        created_at: new Date(),
+        ...data,
+      }),
+    ),
+  },
+});
 
 describe('AuthService', () => {
   const JWT_SECRET = process.env.JWT_SECRET ?? 'inver-secret';
-  let prisma: any;
+  let prisma: ReturnType<typeof createPrismaMock>;
   let service: AuthService;
 
   beforeEach(() => {
-    prisma = {
-      user: {
-        findUnique: jest.fn().mockResolvedValue(null),
-        create: jest.fn(async ({ data }) => ({
-          id: 'u1',
-          created_at: new Date(),
-          ...data,
-        })),
-        update: jest.fn(async ({ data }) => ({
-          id: 'u1',
-          nombre: 'T',
-          email: 't@example.com',
-          created_at: new Date(),
-          ...data,
-        })),
-      },
-    };
-    service = new AuthService(prisma);
+    prisma = createPrismaMock();
+    service = new AuthService(prisma as unknown as PrismaService);
   });
 
   describe('register', () => {
@@ -118,15 +123,15 @@ describe('AuthService', () => {
     expect(res).not.toHaveProperty('password');
   });
 
-  it('login returns a token with the user role', async () => {
-    const out = await service.login({
+  it('login returns a token with the user role', () => {
+    const out = service.login({
       id: 'u1',
       nombre: 'T',
       email: 't@example.com',
       rol: Role.calidad,
     });
 
-    const payload = jwt.verify(out.access_token, JWT_SECRET) as any;
+    const payload = jwt.verify(out.access_token, JWT_SECRET);
     expect(payload).toMatchObject({ sub: 'u1', rol: 'calidad' });
   });
 });

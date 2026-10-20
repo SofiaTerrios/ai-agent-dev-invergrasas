@@ -44,16 +44,14 @@ export default function CertificadosPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [successData, setSuccessData] = useState<{ id: string; archivo_url: string } | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [session] = useState(() =>
+    typeof window === "undefined" ? null : getSession(),
+  );
+  const token = session?.token ?? null;
 
   useEffect(() => {
-    const session = getSession();
-    if (!session) {
-      router.push("/login");
-      return;
-    }
-    setToken(session.token);
-  }, [router]);
+    if (!session) router.push("/login");
+  }, [session, router]);
 
 
   const handleGenerate = async () => {

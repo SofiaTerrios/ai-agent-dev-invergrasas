@@ -53,7 +53,8 @@ export class PedidosService {
     const links = await this.prisma.userEmpresa.findMany({
       where: { user_id: userId },
     });
-    if (!links || links.length === 0) return emptyConnection<PedidoSerializado>();
+    if (!links || links.length === 0)
+      return emptyConnection<PedidoSerializado>();
 
     const empresaIds = links.map((link) => link.empresa_id);
     const where: Prisma.PedidoWhereInput = {
