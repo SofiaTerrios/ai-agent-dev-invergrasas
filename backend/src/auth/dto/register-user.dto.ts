@@ -3,7 +3,7 @@ import {
   IsNotEmpty,
   IsString,
   MinLength,
-  IsIn,
+  IsEnum,
   IsOptional,
 } from 'class-validator';
 import { Role } from '../../graphql/enums';
@@ -23,6 +23,6 @@ export class RegisterUserDto {
   password!: string;
 
   @IsOptional()
-  @IsIn(['admin', 'empleado'])
+  @IsEnum(Role)
   rol?: Role = Role.empleado;
 }

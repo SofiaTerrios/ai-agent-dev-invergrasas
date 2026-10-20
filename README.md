@@ -67,7 +67,7 @@ ai-agent-dev-team-boilerplate/
 │   ├── testing-agent/          # Testing and QA
 │   ├── devops-agent/           # Infrastructure and deployment
 │   └── architecture-agent/    # System design and standards
-└── ai-dev-team/                # AI automation agents (LangGraph)
+└── ai-dev-team/                # Example AI automation agents (LangGraph), not used by the app
     ├── agents/                 # Agent implementations
     │   └── example_agent.py
     └── graph/                  # LangGraph workflows

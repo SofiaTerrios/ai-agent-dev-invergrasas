@@ -7,9 +7,9 @@ import Image from "next/image";
 import {
   LayoutDashboard,
   FileBadge,
+  Truck,
   Building2,
   Users,
-  Settings,
   LogOut,
   X,
 } from "lucide-react";
@@ -38,6 +38,7 @@ const navGroups: NavGroup[] = [
   {
     title: "Operaciones",
     items: [
+      { href: "/dashboard/pedidos", label: "Pedidos", icon: Truck },
       { href: "/dashboard/certificados", label: "Certificados", icon: FileBadge },
     ],
   },

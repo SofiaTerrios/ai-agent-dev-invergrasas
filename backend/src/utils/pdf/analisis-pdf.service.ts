@@ -25,7 +25,6 @@ type CreateAnalisisPdfInput = {
 
 @Injectable()
 export class AnalisisPdfService {
-
   private readonly PW = 595.28;
   private readonly PH = 841.89;
   private readonly ML = 70;
@@ -33,17 +32,23 @@ export class AnalisisPdfService {
   private readonly MT = 50;
   private readonly CW = 595.28 - 140;
 
-  private readonly BLACK    = '#000000';
-  private readonly GRAY     = '#555555';
+  private readonly BLACK = '#000000';
+  private readonly GRAY = '#555555';
   private readonly LIGHT_BG = '#f0f0f0';
 
-  private readonly outputDir = path.join(process.cwd(), 'static', 'certificados');
+  private readonly outputDir = path.join(
+    process.cwd(),
+    'static',
+    'certificados',
+  );
 
-  async generateCertificadoAnalisisPdf(input: CreateAnalisisPdfInput): Promise<string> {
+  async generateCertificadoAnalisisPdf(
+    input: CreateAnalisisPdfInput,
+  ): Promise<string> {
     await fs.mkdir(this.outputDir, { recursive: true });
     const fileName = `cert-${input.certificadoId}.pdf`;
     const filePath = path.join(this.outputDir, fileName);
-    const buffer   = await this.buildPdf(input);
+    const buffer = await this.buildPdf(input);
     await fs.writeFile(filePath, buffer);
     return `/static/certificados/${fileName}`;
   }
@@ -61,8 +66,8 @@ export class AnalisisPdfService {
       });
 
       const chunks: Buffer[] = [];
-      doc.on('data',  (chunk: Buffer) => chunks.push(chunk));
-      doc.on('end',   () => resolve(Buffer.concat(chunks)));
+      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
 
       // cy empieza arriba y SUMA hacia abajo (coordenadas PDFKit nativas)
@@ -75,7 +80,7 @@ export class AnalisisPdfService {
       cy = this.drawLotePeso(doc, input, cy);
       cy = this.drawTable(doc, input, cy);
       cy = this.drawFechaVencimiento(doc, input, cy);
-           this.drawClosingBlock(doc, input, cy);
+      this.drawClosingBlock(doc, input, cy);
 
       doc.end();
     });
@@ -100,12 +105,30 @@ export class AnalisisPdfService {
           align: 'right',
         });
       } catch {
-        this.txt(doc, '[LOGO INVERGRASAS]', this.ML, cy, 'Helvetica-Bold', 8, this.GRAY, 'right');
+        this.txt(
+          doc,
+          '[LOGO INVERGRASAS]',
+          this.ML,
+          cy,
+          'Helvetica-Bold',
+          8,
+          this.GRAY,
+          'right',
+        );
       }
     } else {
-      this.txt(doc, '[LOGO INVERGRASAS]', this.ML, cy, 'Helvetica-Bold', 8, this.GRAY, 'right');
+      this.txt(
+        doc,
+        '[LOGO INVERGRASAS]',
+        this.ML,
+        cy,
+        'Helvetica-Bold',
+        8,
+        this.GRAY,
+        'right',
+      );
     }
-    return cy + 50;  // avanza hacia abajo
+    return cy + 50; // avanza hacia abajo
   }
 
   // ── Ciudad + fecha ────────────────────────────────────────────────────────
@@ -115,7 +138,15 @@ export class AnalisisPdfService {
     input: CreateAnalisisPdfInput,
     cy: number,
   ): number {
-    this.txt(doc, `${this.formatFechaEmision(input.fecha_emision)}.`, this.ML, cy, 'Times-Roman', 11, this.BLACK);
+    this.txt(
+      doc,
+      `${this.formatFechaEmision(input.fecha_emision)}.`,
+      this.ML,
+      cy,
+      'Times-Roman',
+      11,
+      this.BLACK,
+    );
     return cy + 34;
   }
 
@@ -126,9 +157,17 @@ export class AnalisisPdfService {
     input: CreateAnalisisPdfInput,
     cy: number,
   ): number {
-    this.txt(doc, 'Señores:',            this.ML, cy,      'Times-Roman', 11, this.BLACK);
-    this.txt(doc, input.empresa_cliente, this.ML, cy + 17, 'Times-Bold',  11, this.BLACK);
-    this.txt(doc, 'Ciudad',              this.ML, cy + 34, 'Times-Roman', 11, this.BLACK);
+    this.txt(doc, 'Señores:', this.ML, cy, 'Times-Roman', 11, this.BLACK);
+    this.txt(
+      doc,
+      input.empresa_cliente,
+      this.ML,
+      cy + 17,
+      'Times-Bold',
+      11,
+      this.BLACK,
+    );
+    this.txt(doc, 'Ciudad', this.ML, cy + 34, 'Times-Roman', 11, this.BLACK);
     return cy + 34 + 36;
   }
 
@@ -139,7 +178,7 @@ export class AnalisisPdfService {
     input: CreateAnalisisPdfInput,
     cy: number,
   ): number {
-    const tipo  = input.tipo === 'oleina' ? 'OLEINA DE PALMA' : 'RBD';
+    const tipo = input.tipo === 'oleina' ? 'OLEINA DE PALMA' : 'RBD';
     const label = `ASUNTO: CERTIFICADO ANALISIS - ${tipo}`;
     this.txt(doc, label, this.ML, cy, 'Times-Bold', 11, this.BLACK, 'center');
     return cy + 34;
@@ -154,17 +193,36 @@ export class AnalisisPdfService {
   ): number {
     const loteLabel = 'Lote';
     const loteValue = `: ${input.lote}`;
-    const loteW     = doc.font('Times-Bold').fontSize(11).widthOfString(loteLabel);
-    this.txt(doc, loteLabel, this.ML,         cy, 'Times-Bold',  11, this.BLACK);
-    this.txt(doc, loteValue, this.ML + loteW, cy, 'Times-Roman', 11, this.BLACK);
+    const loteW = doc.font('Times-Bold').fontSize(11).widthOfString(loteLabel);
+    this.txt(doc, loteLabel, this.ML, cy, 'Times-Bold', 11, this.BLACK);
+    this.txt(
+      doc,
+      loteValue,
+      this.ML + loteW,
+      cy,
+      'Times-Roman',
+      11,
+      this.BLACK,
+    );
     cy += 20;
 
     if (input.tipo === 'rbd' && input.peso_kg != null) {
       const pesoLabel = 'Peso';
       const pesoValue = `: ${this.formatPeso(input.peso_kg)} kilos`;
-      const pesoW     = doc.font('Times-Bold').fontSize(11).widthOfString(pesoLabel);
-      this.txt(doc, pesoLabel, this.ML,         cy, 'Times-Bold',  11, this.BLACK);
-      this.txt(doc, pesoValue, this.ML + pesoW, cy, 'Times-Roman', 11, this.BLACK);
+      const pesoW = doc
+        .font('Times-Bold')
+        .fontSize(11)
+        .widthOfString(pesoLabel);
+      this.txt(doc, pesoLabel, this.ML, cy, 'Times-Bold', 11, this.BLACK);
+      this.txt(
+        doc,
+        pesoValue,
+        this.ML + pesoW,
+        cy,
+        'Times-Roman',
+        11,
+        this.BLACK,
+      );
       cy += 20;
     }
 
@@ -178,7 +236,15 @@ export class AnalisisPdfService {
     input: CreateAnalisisPdfInput,
     cy: number,
   ): number {
-    this.txt(doc, 'ESPECIFICACIONES FISICOQUIMICAS:', this.ML, cy, 'Times-Bold', 11, this.BLACK);
+    this.txt(
+      doc,
+      'ESPECIFICACIONES FISICOQUIMICAS:',
+      this.ML,
+      cy,
+      'Times-Bold',
+      11,
+      this.BLACK,
+    );
     cy += 18;
 
     const col1 = this.CW * 0.65;
@@ -187,28 +253,39 @@ export class AnalisisPdfService {
     const padX = 8;
     const padY = 6;
 
-    const drawRow = (y: number, label: string, value: string, isHeader = false): number => {
-      const bg   = isHeader ? this.LIGHT_BG : '#ffffff';
+    const drawRow = (
+      y: number,
+      label: string,
+      value: string,
+      isHeader = false,
+    ): number => {
+      const bg = isHeader ? this.LIGHT_BG : '#ffffff';
       const font = isHeader ? 'Times-Bold' : 'Times-Roman';
 
-      doc.rect(this.ML,        y, col1, rowH).fillAndStroke(bg, this.BLACK);
+      doc.rect(this.ML, y, col1, rowH).fillAndStroke(bg, this.BLACK);
       doc.rect(this.ML + col1, y, col2, rowH).fillAndStroke(bg, this.BLACK);
 
-      doc.font(font).fontSize(10.5).fillColor(this.BLACK)
+      doc
+        .font(font)
+        .fontSize(10.5)
+        .fillColor(this.BLACK)
         .text(label, this.ML + padX, y + padY, {
           width: col1 - padX * 2,
           lineBreak: false,
           ellipsis: true,
         });
 
-      doc.font(isHeader ? 'Times-Bold' : 'Times-Roman').fontSize(10.5).fillColor(this.BLACK)
+      doc
+        .font(isHeader ? 'Times-Bold' : 'Times-Roman')
+        .fontSize(10.5)
+        .fillColor(this.BLACK)
         .text(value, this.ML + col1 + padX, y + padY, {
           width: col2 - padX * 2,
           align: 'center',
           lineBreak: false,
         });
 
-      return y + rowH;  // avanza hacia abajo
+      return y + rowH; // avanza hacia abajo
     };
 
     cy = drawRow(cy, 'CARACTERISTICAS', 'RESULTADO', true);
@@ -227,8 +304,26 @@ export class AnalisisPdfService {
     cy: number,
   ): number {
     const fecha = this.formatFechaCorta(input.fecha_vencimiento);
-    this.txt(doc, 'FECHA DE VENCIMIENTO:', this.ML, cy,      'Times-Bold',  11, this.BLACK, 'right');
-    this.txt(doc, `${fecha}.`,             this.ML, cy + 17, 'Times-Roman', 11, this.BLACK, 'right');
+    this.txt(
+      doc,
+      'FECHA DE VENCIMIENTO:',
+      this.ML,
+      cy,
+      'Times-Bold',
+      11,
+      this.BLACK,
+      'right',
+    );
+    this.txt(
+      doc,
+      `${fecha}.`,
+      this.ML,
+      cy + 17,
+      'Times-Roman',
+      11,
+      this.BLACK,
+      'right',
+    );
     return cy + 17 + 38;
   }
 
@@ -268,16 +363,32 @@ export class AnalisisPdfService {
       .stroke();
 
     // Nombre y empresa del firmante
-    this.txt(doc, input.firmado_por, this.ML, cy + 4,  'Times-Roman', 11, this.BLACK);
-    this.txt(doc, 'INVERGRASAS SAS', this.ML, cy + 20, 'Times-Bold',  11, this.BLACK);
+    this.txt(
+      doc,
+      input.firmado_por,
+      this.ML,
+      cy + 4,
+      'Times-Roman',
+      11,
+      this.BLACK,
+    );
+    this.txt(
+      doc,
+      'INVERGRASAS SAS',
+      this.ML,
+      cy + 20,
+      'Times-Bold',
+      11,
+      this.BLACK,
+    );
 
     // Información de la empresa (derecha)
     const infoLines: Array<[string, string]> = [
       ['Helvetica-Bold', 'INVERGRASAS SAS'],
-      ['Helvetica',      'NIT. 901.684.306-1'],
-      ['Helvetica',      'CRA 78 # 41B - 20 SUR'],
-      ['Helvetica',      'invergrasas@gmail.com'],
-      ['Helvetica',      'CEL. 3124325472'],
+      ['Helvetica', 'NIT. 901.684.306-1'],
+      ['Helvetica', 'CRA 78 # 41B - 20 SUR'],
+      ['Helvetica', 'invergrasas@gmail.com'],
+      ['Helvetica', 'CEL. 3124325472'],
     ];
 
     let infoY = cy + 4;
@@ -301,7 +412,7 @@ export class AnalisisPdfService {
   ): void {
     doc.font(font).fontSize(size).fillColor(color);
     doc.text(text, x, y, {
-      width:     this.CW,
+      width: this.CW,
       align,
       lineBreak: false,
     });
@@ -311,8 +422,18 @@ export class AnalisisPdfService {
 
   private formatFechaEmision(date: Date): string {
     const months = [
-      'enero','febrero','marzo','abril','mayo','junio',
-      'julio','agosto','septiembre','octubre','noviembre','diciembre',
+      'enero',
+      'febrero',
+      'marzo',
+      'abril',
+      'mayo',
+      'junio',
+      'julio',
+      'agosto',
+      'septiembre',
+      'octubre',
+      'noviembre',
+      'diciembre',
     ];
     const dd = String(date.getDate()).padStart(2, '0');
     return `Bogota D.C, ${months[date.getMonth()]} ${dd} de ${date.getFullYear()}`;

@@ -2,8 +2,11 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PedidosService } from './pedidos.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { Producto, TipoEmpaque } from '../graphql/enums';
 
 const decimal = (value: number) => ({ toNumber: () => value });
+
+const empleado = { id: 'user-1', rol: 'empleado' };
 
 describe('PedidosService', () => {
   let service: PedidosService;
@@ -13,6 +16,7 @@ describe('PedidosService', () => {
     pedido: {
       create: jest.Mock;
       findMany: jest.Mock;
+      count: jest.Mock;
       findUnique: jest.Mock;
       update: jest.Mock;
     };
@@ -29,6 +33,7 @@ describe('PedidosService', () => {
       pedido: {
         create: jest.fn(),
         findMany: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
         findUnique: jest.fn(),
         update: jest.fn(),
       },
@@ -55,8 +60,8 @@ describe('PedidosService', () => {
     const payload = {
       empresa_id: '11111111-1111-1111-1111-111111111111',
       cliente_id: '22222222-2222-2222-2222-222222222222',
-      producto: 'RBD' as const,
-      tipo_empaque: 'Granel' as const,
+      producto: Producto.RBD,
+      tipo_empaque: TipoEmpaque.Granel,
       cantidad_kg: 100.5,
       fecha: '2026-02-01',
     };
@@ -95,8 +100,8 @@ describe('PedidosService', () => {
         {
           empresa_id: '00000000-0000-0000-0000-000000000000',
           cliente_id: '11111111-1111-1111-1111-111111111111',
-          producto: 'RBD',
-          tipo_empaque: 'Granel',
+          producto: Producto.RBD,
+          tipo_empaque: TipoEmpaque.Granel,
           cantidad_kg: 100,
           fecha: '2026-02-01',
         },
@@ -106,14 +111,15 @@ describe('PedidosService', () => {
   });
 
   describe('listForUser', () => {
-    it('returns empty array when user has no associated empresas', async () => {
+    it('returns an empty page when user has no associated empresas', async () => {
       prisma.userEmpresa.findMany.mockResolvedValue([]);
 
-      const res = await service.listForUser('user-1', {});
+      const res = await service.listForUser(empleado, {});
 
-      expect(res).toEqual([]);
+      expect(res.edges).toEqual([]);
+      expect(res.pageInfo.hasNextPage).toBe(false);
       expect(prisma.userEmpresa.findMany).toHaveBeenCalledWith({
-        where: { user_id: 'user-1' },
+        where: { user_id: 'user-1', empresa: { deleted_at: null } },
       });
       expect(prisma.pedido.findMany).not.toHaveBeenCalled();
     });
@@ -135,11 +141,11 @@ describe('PedidosService', () => {
         },
       ]);
 
-      const res = await service.listForUser('user-1', {
+      const res = await service.listForUser(empleado, {
         fecha_inicio: '2026-03-01',
         fecha_fin: '2026-03-31',
         cliente_id: 'cliente-1',
-        producto: 'RBD' as any,
+        producto: Producto.RBD,
       });
 
       expect(prisma.pedido.findMany).toHaveBeenCalledWith({
@@ -153,11 +159,12 @@ describe('PedidosService', () => {
           },
         },
         include: { cliente: true },
-        orderBy: { fecha: 'desc' },
+        orderBy: [{ fecha: 'desc' }, { created_at: 'desc' }, { id: 'desc' }],
+        take: 21,
       });
-      expect(res).toHaveLength(1);
-      expect(res[0].cantidad_kg).toBe(150);
-      expect(res[0].cliente.nombre).toBe('Cliente Uno');
+      expect(res.edges).toHaveLength(1);
+      expect(res.edges[0].node.cantidad_kg).toBe(150);
+      expect(res.edges[0].node.cliente.nombre).toBe('Cliente Uno');
     });
 
     it('limits results to pedidos from associated empresas only', async () => {
@@ -167,15 +174,84 @@ describe('PedidosService', () => {
       ]);
       prisma.pedido.findMany.mockResolvedValue([]);
 
-      await service.listForUser('user-1', {});
+      await service.listForUser(empleado, {});
 
       expect(prisma.pedido.findMany).toHaveBeenCalledWith({
         where: {
           empresa_id: { in: ['empresa-1', 'empresa-2'] },
         },
         include: { cliente: true },
-        orderBy: { fecha: 'desc' },
+        orderBy: [{ fecha: 'desc' }, { created_at: 'desc' }, { id: 'desc' }],
+        take: 21,
       });
+    });
+
+    it('paginates with a cursor and reports the next page', async () => {
+      prisma.userEmpresa.findMany.mockResolvedValue([
+        { user_id: 'user-1', empresa_id: 'empresa-1' },
+      ]);
+      const pedido = (id: string) => ({
+        id,
+        empresa_id: 'empresa-1',
+        cantidad_kg: decimal(1),
+        cliente: null,
+      });
+      prisma.pedido.findMany.mockResolvedValue([
+        pedido('p3'),
+        pedido('p4'),
+        pedido('p5'),
+      ]);
+      prisma.pedido.count.mockResolvedValue(5);
+
+      const first = await service.listForUser(empleado, {}, { first: 2 });
+      expect(first.edges).toHaveLength(2);
+      expect(first.pageInfo.hasNextPage).toBe(true);
+      expect(first.totalCount).toBe(5);
+
+      await service.listForUser(
+        empleado,
+        {},
+        {
+          first: 2,
+          after: first.pageInfo.endCursor!,
+        },
+      );
+      expect(prisma.pedido.findMany).toHaveBeenLastCalledWith(
+        expect.objectContaining({ take: 3, skip: 1, cursor: { id: 'p4' } }),
+      );
+    });
+  });
+
+  describe('listForUser with empresa_id', () => {
+    it('narrows to the selected empresa when the user belongs to it', async () => {
+      prisma.userEmpresa.findUnique.mockResolvedValue({ id: 'link' });
+      prisma.pedido.findMany.mockResolvedValue([]);
+
+      await service.listForUser(empleado, { empresa_id: 'empresa-2' });
+
+      expect(prisma.pedido.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { empresa_id: 'empresa-2' } }),
+      );
+    });
+
+    it('forbids an empresa the user does not belong to', async () => {
+      prisma.userEmpresa.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.listForUser(empleado, { empresa_id: 'empresa-x' }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.pedido.findMany).not.toHaveBeenCalled();
+    });
+
+    it('lets admins list any empresa', async () => {
+      prisma.pedido.findMany.mockResolvedValue([]);
+
+      await service.listForUser({ id: 'admin', rol: 'admin' }, {});
+
+      expect(prisma.userEmpresa.findMany).not.toHaveBeenCalled();
+      expect(prisma.pedido.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: {} }),
+      );
     });
   });
 
@@ -188,10 +264,14 @@ describe('PedidosService', () => {
     prisma.userEmpresa.findUnique.mockResolvedValue(null);
 
     await expect(
-      service.update('pedido-1', { cantidad_kg: 200 }, {
-        id: 'user-1',
-        rol: 'empleado',
-      }),
+      service.update(
+        'pedido-1',
+        { cantidad_kg: 200 },
+        {
+          id: 'user-1',
+          rol: 'empleado',
+        },
+      ),
     ).rejects.toThrow(ForbiddenException);
   });
 });

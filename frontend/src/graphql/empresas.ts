@@ -1,13 +1,22 @@
 export const GET_EMPRESAS_QUERY = `
-  query GetEmpresas {
-    empresas {
-      id
-      razon_social
-      nit
-      direccion
-      telefono
-      correo
-      created_at
+  query GetEmpresas($first: Int, $after: String) {
+    empresas(first: $first, after: $after) {
+      edges {
+        node {
+          id
+          razon_social
+          nit
+          direccion
+          telefono
+          correo
+          created_at
+        }
+      }
+      pageInfo {
+        endCursor
+        hasNextPage
+      }
+      totalCount
     }
   }
 `;

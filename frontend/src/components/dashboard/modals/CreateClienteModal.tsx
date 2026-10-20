@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import FormError from "@/components/ui/FormError";
-import { graphqlRequest } from "@/lib/graphql";
+import { fetchAllNodes, graphqlRequest } from "@/lib/graphql";
 import { GET_EMPRESAS_QUERY, type Empresa } from "@/graphql/empresas";
 import { CREATE_CLIENTE_MUTATION, type CreateClienteInput } from "@/graphql/clientes";
 
@@ -61,17 +61,20 @@ export default function CreateClienteModal({
   const [errors, setErrors] = useState<Partial<Record<keyof FormValues, string>>>({});
   const [submitError, setSubmitError] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
-  const [empresas, setEmpresas] = useState<Empresa[]>([]);
-  const [loadingEmpresas, setLoadingEmpresas] = useState(false);
+  // null until loaded
+  const [empresasState, setEmpresas] = useState<Empresa[] | null>(null);
+  const empresas = empresasState ?? [];
+  const loadingEmpresas = Boolean(isOpen && token) && empresasState === null;
 
   // Load empresas on mount
   useEffect(() => {
     if (isOpen && token) {
-      setLoadingEmpresas(true);
-      graphqlRequest<{ empresas: Empresa[] }>(GET_EMPRESAS_QUERY, undefined, token)
-        .then((data) => setEmpresas(data.empresas || []))
-        .catch((err) => console.error("Error loading empresas:", err))
-        .finally(() => setLoadingEmpresas(false));
+      fetchAllNodes<Empresa>(GET_EMPRESAS_QUERY, "empresas", {}, token)
+        .then(setEmpresas)
+        .catch((err) => {
+          console.error("Error loading empresas:", err);
+          setEmpresas([]);
+        });
     }
   }, [isOpen, token]);
 

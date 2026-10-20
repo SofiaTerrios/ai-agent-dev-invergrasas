@@ -1,29 +1,43 @@
-import { Args, Context, ID, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, ID, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { UseGuards } from '@nestjs/common';
 import { EmpresasService } from './empresas.service';
-import { EmpresaModel, MessagePayload } from '../graphql/models';
+import {
+  EmpresaConnection,
+  EmpresaModel,
+  MessagePayload,
+} from '../graphql/models';
+import { PaginationArgs } from '../common/pagination';
 import { CreateEmpresaInput, UpdateEmpresaInput } from '../graphql/inputs';
-import { getUserFromContext } from '../graphql/graphql-auth';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { AuthUser } from '../auth/request.util';
+import { PERMISOS } from '../auth/roles';
 
 @Resolver(() => EmpresaModel)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class EmpresasResolver {
   constructor(private readonly empresasService: EmpresasService) {}
 
-  @Query(() => [EmpresaModel])
-  async empresas(@Context() context: any) {
-    const user = getUserFromContext(context);
+  @Query(() => EmpresaConnection)
+  @Roles(...PERMISOS.empresas.leer)
+  async empresas(
+    @Args() pagination: PaginationArgs,
+    @CurrentUser() user: AuthUser,
+  ) {
     // Admins see all empresas, other users see only their associated empresas
-    if (user.rol === 'admin') {
-      return this.empresasService.findAll();
-    }
-    return this.empresasService.findAllForUser(user.id);
+    return this.empresasService.list(user, pagination);
   }
 
   @Mutation(() => EmpresaModel)
+  @Roles(...PERMISOS.empresas.escribir)
   async createEmpresa(@Args('input') input: CreateEmpresaInput) {
     return this.empresasService.create(input);
   }
 
   @Mutation(() => EmpresaModel)
+  @Roles(...PERMISOS.empresas.escribir)
   async updateEmpresa(
     @Args('id', { type: () => ID }) id: string,
     @Args('input') input: UpdateEmpresaInput,
@@ -32,12 +46,11 @@ export class EmpresasResolver {
   }
 
   @Mutation(() => MessagePayload)
+  @Roles(...PERMISOS.empresas.escribir)
   async associateUserToEmpresa(
     @Args('empresaId', { type: () => ID }) empresaId: string,
     @Args('userId', { type: () => ID }) userId: string,
-    @Context() context: any,
   ) {
-    getUserFromContext(context);
     return this.empresasService.associateUserToEmpresa(empresaId, userId);
   }
 }

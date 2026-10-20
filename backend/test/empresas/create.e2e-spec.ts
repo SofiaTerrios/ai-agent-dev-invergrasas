@@ -1,61 +1,58 @@
-import express from 'express';
-import bodyParser from 'body-parser';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import authController from '../../src/auth/auth.controller';
-import empresasController from '../../src/empresas/empresas.controller';
-import { AppDataSource } from '../../src/data-source';
+import { PrismaService } from '../../src/prisma/prisma.service';
+import { auth, createE2EApp, createUser } from '../utils/e2e';
 
-describe('Empresas E2E', () => {
-  let app: express.Express;
+describe('Empresas E2E - create', () => {
+  let app: INestApplication;
+  let prisma: PrismaService;
+  let token: string;
 
   beforeAll(async () => {
-    app = express();
-    app.use(bodyParser.json());
-    app.use('/api/auth', authController as any);
-    app.use('/api/empresas', empresasController as any);
-    process.env.NODE_ENV = 'test';
-    await AppDataSource.initialize();
+    ({ app, prisma } = await createE2EApp());
+    ({ token } = await createUser(prisma, 'admin'));
   });
 
   afterAll(async () => {
-    if (AppDataSource.isInitialized) await AppDataSource.destroy();
+    await app.close();
   });
 
   it('creates empresa when authenticated', async () => {
-    // register and login
-    await request(app)
-      .post('/api/auth/register')
-      .send({ nombre: 'E', email: 'e@e.com', password: 'password' });
-    const login = await request(app)
-      .post('/api/auth/login')
-      .send({ email: 'e@e.com', password: 'password' });
-    expect(login.status).toBe(200);
-    const token = login.body.access_token || login.body.token;
-    const res = await request(app)
+    const res = await request(app.getHttpServer())
       .post('/api/empresas')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ razon_social: 'R', nit: 'NIT1', correo: 'c@c.com' });
-    expect(res.status).toBe(201);
-    expect(res.body).toHaveProperty('id');
+      .set(auth(token))
+      .send({
+        razon_social: 'Empresa Uno',
+        nit: 'NIT-1',
+        correo: 'uno@test.com',
+      })
+      .expect(201);
+    expect(res.body).toMatchObject({
+      razon_social: 'Empresa Uno',
+      nit: 'NIT-1',
+    });
   });
 
-  it('rejects duplicate NIT', async () => {
-    // ensure existing
-    const login = await request(app)
-      .post('/api/auth/login')
-      .send({ email: 'e@e.com', password: 'password' });
-    const token = login.body.access_token || login.body.token;
-    const res = await request(app)
+  it('rejects duplicate NIT with 409', async () => {
+    await request(app.getHttpServer())
       .post('/api/empresas')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ razon_social: 'R2', nit: 'NIT1', correo: 'c@c.com' });
-    expect(res.status).toBe(409);
+      .set(auth(token))
+      .send({ razon_social: 'Otra', nit: 'NIT-1' })
+      .expect(409);
   });
 
-  it('unauthenticated returns 401', async () => {
-    const res = await request(app)
+  it('returns 400 for invalid data', async () => {
+    await request(app.getHttpServer())
       .post('/api/empresas')
-      .send({ razon_social: 'R3', nit: 'NIT3' });
-    expect(res.status).toBe(401);
+      .set(auth(token))
+      .send({ razon_social: 'Sin NIT', correo: 'no-es-correo' })
+      .expect(400);
+  });
+
+  it('returns 401 when unauthenticated', async () => {
+    await request(app.getHttpServer())
+      .post('/api/empresas')
+      .send({ razon_social: 'X', nit: 'NIT-X' })
+      .expect(401);
   });
 });

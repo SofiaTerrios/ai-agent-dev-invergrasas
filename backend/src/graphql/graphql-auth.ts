@@ -1,30 +1,9 @@
-import { UnauthorizedException } from '@nestjs/common';
-import jwt from 'jsonwebtoken';
+import type { IncomingHttpHeaders } from 'http';
+import { userFromAuthHeader } from '../auth/jwt';
 
-const JWT_SECRET = process.env.JWT_SECRET ?? 'inver-secret';
+export type GqlContext = { req?: { headers?: IncomingHttpHeaders } };
 
-export type CurrentUser = {
-  id: string;
-  email?: string;
-  nombre?: string;
-  rol?: string;
-};
-
-export function getUserFromContext(context: { req?: { headers?: any } }) {
-  const authHeader = context.req?.headers?.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new UnauthorizedException('Missing or invalid token');
-  }
-
-  try {
-    const payload = jwt.verify(authHeader.split(' ')[1], JWT_SECRET) as any;
-    return {
-      id: payload.sub,
-      email: payload.email,
-      nombre: payload.nombre,
-      rol: payload.rol,
-    } satisfies CurrentUser;
-  } catch {
-    throw new UnauthorizedException('Invalid token');
-  }
+// For resolvers that read the token themselves (e.g. optional auth).
+export function getUserFromContext(context: GqlContext) {
+  return userFromAuthHeader(context.req?.headers?.authorization);
 }

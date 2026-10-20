@@ -3,7 +3,10 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { paginate, PaginationArgs } from '../common/pagination';
+import { accessibleEmpresaIds } from './empresa-access';
 import { CreateEmpresaDto } from './dto/create-empresa.dto';
 import { UpdateEmpresaDto } from './dto/update-empresa.dto';
 
@@ -12,8 +15,9 @@ export class EmpresasService {
   constructor(private prisma: PrismaService) {}
 
   async create(data: CreateEmpresaDto) {
+    // nit is unique at DB level, so soft-deleted empresas still hold it
     const exists = await this.prisma.empresa.findUnique({
-      where: { nit: data.nit },
+      where: { nit: data.nit, deleted_at: undefined },
     });
     if (exists) throw new ConflictException('NIT_EXISTS');
     return this.prisma.empresa.create({ data });
@@ -24,26 +28,30 @@ export class EmpresasService {
     if (!existing) throw new NotFoundException('NOT_FOUND');
     if (data.nit && data.nit !== existing.nit) {
       const conflict = await this.prisma.empresa.findUnique({
-        where: { nit: data.nit },
+        where: { nit: data.nit, deleted_at: undefined },
       });
       if (conflict) throw new ConflictException('NIT_EXISTS');
     }
     return this.prisma.empresa.update({ where: { id }, data });
   }
 
-  async findAllForUser(userId: string) {
-    const links = await this.prisma.userEmpresa.findMany({
-      where: { user_id: userId },
-      include: { empresa: true },
-    });
-    if (!links || links.length === 0) return [];
-    return links.map((link) => link.empresa);
-  }
+  // Admins get every empresa, other users only the ones they are linked to.
+  async list(actor: { id: string; rol?: string }, pagination?: PaginationArgs) {
+    const empresaIds = await accessibleEmpresaIds(this.prisma, actor);
+    const where: Prisma.EmpresaWhereInput = empresaIds
+      ? { id: { in: empresaIds } }
+      : {};
 
-  async findAll() {
-    return this.prisma.empresa.findMany({
-      orderBy: { created_at: 'desc' },
-    });
+    return paginate(
+      pagination,
+      (page) =>
+        this.prisma.empresa.findMany({
+          where,
+          orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+          ...page,
+        }),
+      () => this.prisma.empresa.count({ where }),
+    );
   }
 
   async associateUserToEmpresa(empresaId: string, userId: string) {
@@ -66,11 +74,11 @@ export class EmpresasService {
       return { message: 'Already associated' };
     }
 
-    await this.prisma.userEmpresa.create({
-      data: {
-        user_id: userId,
-        empresa_id: empresaId,
-      },
+    // Restores a previously soft-deleted link instead of violating the unique key
+    await this.prisma.userEmpresa.upsert({
+      where: { user_id_empresa_id: { user_id: userId, empresa_id: empresaId } },
+      create: { user_id: userId, empresa_id: empresaId },
+      update: { deleted_at: null },
     });
 
     return { message: 'Association created successfully' };

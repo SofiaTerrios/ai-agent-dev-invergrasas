@@ -6,7 +6,6 @@ import StatsBar from "@/components/landing/StatsBar";
 import QuienesSomos from "@/components/landing/QuienesSomos";
 import Cualidades from "@/components/landing/Cualidades";
 import ProductCarousel from "@/components/landing/ProductCarousel";
-import Footer from "@/components/landing/Footer";
 
 export default function InverGrasasLanding() {
   return (

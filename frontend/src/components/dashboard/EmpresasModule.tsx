@@ -7,13 +7,22 @@ import EditEmpresaModal from "./modals/EditEmpresaModal";
 import EmpresasTable from "./EmpresasTable";
 import EmpresasCards from "./EmpresasCards";
 import Button from "@/components/ui/Button";
-import { graphqlRequest } from "@/lib/graphql";
+import {
+  connectionNodes,
+  graphqlRequest,
+  PAGE_SIZE,
+  type Connection,
+  type PageInfo,
+} from "@/lib/graphql";
 import { GET_EMPRESAS_QUERY, type Empresa } from "@/graphql/empresas";
 import { getSession } from "@/lib/session";
 
 export default function EmpresasModule() {
   const router = useRouter();
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [pageInfo, setPageInfo] = useState<PageInfo>({ endCursor: null, hasNextPage: false });
+  const [totalCount, setTotalCount] = useState(0);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -34,43 +43,56 @@ export default function EmpresasModule() {
     }
   }, [session, isAdmin, router]);
 
-  // Load empresas
-  const loadEmpresas = useCallback(async () => {
+  // Loads the first page, or appends the next one when `after` is given.
+  // State is only set in promise callbacks, so it can run from an effect.
+  const fetchEmpresas = useCallback(
+    (after?: string) =>
+      graphqlRequest<{ empresas: Connection<Empresa> }>(
+        GET_EMPRESAS_QUERY,
+        { first: PAGE_SIZE, after },
+        token,
+      )
+        .then((data) => {
+          const page = connectionNodes(data.empresas);
+          setEmpresas((prev) => (after ? [...prev, ...page] : page));
+          setPageInfo(data.empresas.pageInfo);
+          setTotalCount(data.empresas.totalCount);
+        })
+        .catch((error: unknown) => {
+          const errorMessage = error instanceof Error ? error.message : "Error al cargar empresas";
+          console.error("Error loading empresas:", errorMessage);
+      
+          if (errorMessage.includes("Invalid token") || errorMessage.includes("Unauthorized")) {
+            setError("Sesión expirada. Por favor, inicia sesión nuevamente.");
+            setTimeout(() => router.push("/login"), 2000);
+          } else {
+            setError(errorMessage);
+          }
+        })
+        .finally(() => {
+          setIsLoading(false);
+          setIsLoadingMore(false);
+        }),
+    [token, router],
+  );
+
+  const loadEmpresas = (after?: string) => {
     if (!token) {
       setError("Token no disponible. Por favor, inicia sesión nuevamente.");
       setIsLoading(false);
       return;
     }
-
-    setIsLoading(true);
+    if (after) setIsLoadingMore(true);
+    else setIsLoading(true);
     setError("");
-    try {
-      const data = await graphqlRequest<{ empresas: Empresa[] }>(
-        GET_EMPRESAS_QUERY,
-        undefined,
-        token
-      );
-      setEmpresas(data.empresas || []);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Error al cargar empresas";
-      console.error("Error loading empresas:", errorMessage);
-      
-      if (errorMessage.includes("Invalid token") || errorMessage.includes("Unauthorized")) {
-        setError("Sesión expirada. Por favor, inicia sesión nuevamente.");
-        setTimeout(() => router.push("/login"), 2000);
-      } else {
-        setError(errorMessage);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [token, router]);
+    void fetchEmpresas(after);
+  };
 
   useEffect(() => {
     if (isAdmin && token) {
-      loadEmpresas();
+      void fetchEmpresas();
     }
-  }, [isAdmin, token, loadEmpresas]);
+  }, [isAdmin, token, fetchEmpresas]);
 
   // Show loading while checking auth
   if (!session) {
@@ -146,7 +168,7 @@ export default function EmpresasModule() {
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#7D8E86]">
               Total de Empresas
             </p>
-            <p className="mt-3 text-3xl font-black text-[#17251F]">{empresas.length}</p>
+            <p className="mt-3 text-3xl font-black text-[#17251F]">{totalCount}</p>
           </article>
 
           <article className="rounded-lg border border-[#DDE8E2] bg-white p-4 shadow-sm">
@@ -154,7 +176,7 @@ export default function EmpresasModule() {
               Activas
             </p>
             <p className="mt-3 text-3xl font-black text-[#0F6E2E]">
-              {empresas.length}
+              {totalCount}
             </p>
           </article>
 
@@ -200,6 +222,18 @@ export default function EmpresasModule() {
             onDelete={handleDelete}
             isLoading={isLoading}
           />
+          {pageInfo.hasNextPage && !isLoading && (
+            <div className="flex justify-center">
+              <Button
+                variant="secondary"
+                onClick={() => loadEmpresas(pageInfo.endCursor ?? undefined)}
+                isLoading={isLoadingMore}
+                className="w-auto px-8"
+              >
+                Cargar más ({empresas.length} de {totalCount})
+              </Button>
+            </div>
+          )}
         </>
       )}
 

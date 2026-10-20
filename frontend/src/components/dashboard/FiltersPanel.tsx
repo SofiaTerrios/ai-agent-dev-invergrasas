@@ -7,12 +7,15 @@ export type OrdersFilters = {
 
 type FiltersPanelProps = {
   filters: OrdersFilters;
+  // Clientes for the cliente filter; the filter is hidden when not given
+  clientes?: { id: string; nombre: string }[];
   onChange: (name: keyof OrdersFilters, value: string) => void;
   onReset: () => void;
 };
 
 export default function FiltersPanel({
   filters,
+  clientes,
   onChange,
   onReset,
 }: FiltersPanelProps) {
@@ -40,16 +43,23 @@ export default function FiltersPanel({
             />
           </label>
 
-          <label className="flex flex-col gap-1.5 text-sm text-[#2F473D]">
-            Cliente
-            <input
-              type="text"
-              placeholder="ID del cliente"
-              value={filters.cliente_id}
-              onChange={(event) => onChange("cliente_id", event.target.value)}
-              className="rounded-lg border border-[#D5E1DB] px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[#0F6E2E]"
-            />
-          </label>
+          {clientes && (
+            <label className="flex flex-col gap-1.5 text-sm text-[#2F473D]">
+              Cliente
+              <select
+                value={filters.cliente_id}
+                onChange={(event) => onChange("cliente_id", event.target.value)}
+                className="rounded-lg border border-[#D5E1DB] px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[#0F6E2E]"
+              >
+                <option value="">Todos</option>
+                {clientes.map((cliente) => (
+                  <option key={cliente.id} value={cliente.id}>
+                    {cliente.nombre}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
 
           <label className="flex flex-col gap-1.5 text-sm text-[#2F473D]">
             Producto

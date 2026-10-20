@@ -1,0 +1,109 @@
+import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import request from 'supertest';
+import jwt from 'jsonwebtoken';
+import { randomUUID } from 'crypto';
+import { Rol } from '@prisma/client';
+import { AppModule } from '../../src/app.module';
+import { PrismaService } from '../../src/prisma/prisma.service';
+
+// Runs against the real Postgres pointed to by DATABASE_URL (with migrations applied).
+// Each suite starts from empty tables.
+
+const JWT_SECRET = process.env.JWT_SECRET ?? 'inver-secret';
+
+export async function createE2EApp() {
+  const moduleRef = await Test.createTestingModule({
+    imports: [AppModule],
+  }).compile();
+
+  const app = moduleRef.createNestApplication();
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+  await app.init();
+
+  const prisma = app.get(PrismaService);
+  await resetDatabase(prisma);
+  return { app, prisma };
+}
+
+export async function resetDatabase(prisma: PrismaService) {
+  await prisma.$executeRawUnsafe(
+    'TRUNCATE TABLE parametros_analisis, certificados_analisis, pedidos, clientes, user_empresas, empresas, users CASCADE',
+  );
+}
+
+export function tokenFor(user: {
+  id: string;
+  email: string;
+  nombre: string;
+  rol: string;
+}) {
+  return jwt.sign(
+    { sub: user.id, email: user.email, nombre: user.nombre, rol: user.rol },
+    JWT_SECRET,
+    { expiresIn: '1h' },
+  );
+}
+
+export type GqlError = { message: string; extensions?: { code?: string } };
+export type GqlResponse<T> = { data: T; errors?: GqlError[] };
+
+export async function gql<T = unknown>(
+  app: INestApplication,
+  token: string | null,
+  query: string,
+  variables?: Record<string, unknown>,
+): Promise<GqlResponse<T>> {
+  const req = request(app.getHttpServer()).post('/graphql');
+  if (token) req.set('Authorization', `Bearer ${token}`);
+  const res = await req.send({ query, variables });
+  return res.body as GqlResponse<T>;
+}
+
+export async function createUser(
+  prisma: PrismaService,
+  rol: Rol,
+  empresaIds: string[] = [],
+) {
+  const user = await prisma.user.create({
+    data: {
+      nombre: `Usuario ${rol}`,
+      email: `${rol}-${randomUUID()}@e2e.test`,
+      password: 'x',
+      rol,
+    },
+  });
+  for (const empresa_id of empresaIds) {
+    await prisma.userEmpresa.create({ data: { user_id: user.id, empresa_id } });
+  }
+  return { user, token: tokenFor(user) };
+}
+
+export function createEmpresa(
+  prisma: PrismaService,
+  nit: string = randomUUID(),
+) {
+  return prisma.empresa.create({
+    data: { razon_social: `Empresa ${nit}`, nit },
+  });
+}
+
+export function createCliente(prisma: PrismaService, empresa_id: string) {
+  return prisma.cliente.create({
+    data: {
+      nombre: `Cliente ${randomUUID()}`,
+      contacto: 'Contacto',
+      telefono: '123',
+      correo: 'cliente@e2e.test',
+      empresa_id,
+    },
+  });
+}
+
+export const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
