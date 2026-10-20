@@ -9,17 +9,21 @@ import {
 } from '../graphql/models';
 import { CertificadosArgs } from '../graphql/args';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { PERMISOS } from '../auth/roles';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthUser } from '../auth/request.util';
 import { CertificadoTipoDto } from './dto/create-certificado.dto';
 import { CertificadoTipo } from '../graphql/enums';
 
 @Resolver()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class CertificadosResolver {
   constructor(private readonly certificadosService: CertificadosService) {}
 
   @Mutation(() => CertificadoAnalisisModel)
+  @Roles(...PERMISOS.certificados.escribir)
   async createCertificado(
     @Args('input') input: CreateCertificadoInput,
     @CurrentUser() user: AuthUser,
@@ -36,6 +40,7 @@ export class CertificadosResolver {
   }
 
   @Query(() => CertificadoConnection)
+  @Roles(...PERMISOS.certificados.leer)
   async certificados(
     @CurrentUser() user: AuthUser,
     @Args() { empresaId, ...pagination }: CertificadosArgs,
@@ -44,6 +49,7 @@ export class CertificadosResolver {
   }
 
   @Query(() => CertificadoModel)
+  @Roles(...PERMISOS.certificados.leer)
   async certificado(
     @Args('id', { type: () => ID }) id: string,
     @CurrentUser() user: AuthUser,

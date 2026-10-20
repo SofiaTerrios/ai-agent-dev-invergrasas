@@ -57,6 +57,16 @@ $ npm run test:e2e
 $ npm run test:cov
 ```
 
+The e2e suites built on the Nest app (`test/utils/e2e.ts`) run against a real
+Postgres and truncate its tables, so point `DATABASE_URL` to a throwaway
+database with the migrations applied:
+
+```bash
+$ export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/invergrasas_test
+$ npx prisma migrate deploy
+$ npx jest --config test/jest-e2e.json --runInBand test/auth/roles test/certificados test/clientes/delete test/clientes/list
+```
+
 ## Deployment
 
 When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.

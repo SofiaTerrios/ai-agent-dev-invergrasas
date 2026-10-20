@@ -1,5 +1,8 @@
+// Mirrors the Prisma `Rol` enum
 export enum Role {
   admin = 'admin',
+  comercial = 'comercial',
+  calidad = 'calidad',
   empleado = 'empleado',
 }
 

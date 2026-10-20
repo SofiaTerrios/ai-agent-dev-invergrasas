@@ -7,12 +7,21 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Rol global del usuario. El acceso por empresa se controla con UserEmpresa.
+// Permisos por módulo: src/auth/roles.ts
+enum Rol {
+  admin
+  comercial
+  calidad
+  empleado
+}
+
 model User {
   id         String        @id @default(uuid())
   nombre     String
   email      String        @unique
   password   String
-  rol        String
+  rol        Rol           @default(empleado)
   created_at DateTime      @default(now())
   deleted_at DateTime?
   empresas   UserEmpresa[]
