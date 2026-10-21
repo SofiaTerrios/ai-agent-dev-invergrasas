@@ -73,6 +73,26 @@ describe('Pedidos E2E - create', () => {
     expect(res.errors?.[0]?.message).toBe('Cliente not found');
   });
 
+  it('forbids creating pedidos in an empresa the user does not belong to', async () => {
+    const otra = (await createEmpresa(prisma)).id;
+    const clienteOtra = (await createCliente(prisma, otra)).id;
+    const res = await gql(app, token, CREATE, {
+      input: input({ empresa_id: otra, cliente_id: clienteOtra }),
+    });
+    expect(res.errors?.[0]?.extensions?.code).toBe('FORBIDDEN');
+  });
+
+  it('rejects a cliente from another empresa', async () => {
+    const otra = (await createEmpresa(prisma)).id;
+    const clienteOtra = (await createCliente(prisma, otra)).id;
+    const res = await gql(app, token, CREATE, {
+      input: input({ cliente_id: clienteOtra }),
+    });
+    expect(res.errors?.[0]?.message).toBe(
+      'El cliente no pertenece a la empresa',
+    );
+  });
+
   it('rejects invalid enum values', async () => {
     const res = await gql(app, token, CREATE, {
       input: input({ producto: 'Aceite' }),

@@ -1,6 +1,6 @@
-# AI Software Factory — Orchestrator
+# Flujo con agentes — Orquestador
 
-The **Orchestrator** is the coordination layer of the AI Software Factory. It defines how agents collaborate to complete tasks end-to-end, from an initial product requirement all the way to a deployed, tested application.
+The **Orchestrator** is the coordination layer of the AI-assisted development workflow used in this repository. It defines how agents collaborate to complete tasks end-to-end, from an initial product requirement all the way to a deployed, tested application.
 
 ---
 

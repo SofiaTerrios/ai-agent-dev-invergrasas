@@ -1,52 +1,58 @@
-# Project Progress
+# Progreso
 
-This file tracks the completion status of every task in the project. Agents must update this file after completing or blocking a task. The Orchestrator reads this file to determine the next task to assign.
+Estado de las tareas del repositorio (`tasks/`) y de las tareas de Jira (proyecto IG).
 
----
+Leyenda de estados:
 
-## Status Legend
+- `pending`: no iniciada.
+- `in-progress`: en curso.
+- `blocked`: esperando una decisión o dependencia.
+- `done`: criterios de aceptación cumplidos.
 
-| Status | Meaning |
-|---|---|
-| `pending` | Task created, not yet started |
-| `in-progress` | Agent is actively working on the task |
-| `blocked` | Waiting on a dependency or decision |
-| `review` | Work completed; awaiting validation |
-| `done` | Acceptance criteria met and verified |
+## Tareas del repositorio (`tasks/`)
 
----
-
-## Task Tracker
-
-| Task File | Title | Assigned Agent | Status | Notes |
-|---|---|---|---|---|
-| `tasks/01-project-setup.md` | Project Setup | Architecture Agent | `pending` | |
-| `tasks/02-authentication.md` | Authentication | Backend Agent | `pending` | |
-
-_Add new rows as tasks are created. Remove rows only when a task is archived._
-
----
-
-## Milestones
-
-| Milestone | Target Date | Status | Tasks Included |
+| Tarea | Título | Estado | Notas |
 |---|---|---|---|
-| M1 — Project Scaffold | _YYYY-MM-DD_ | `pending` | 01, 02 |
-| M2 — Core Features | _YYYY-MM-DD_ | `pending` | |
-| M3 — Testing & QA | _YYYY-MM-DD_ | `pending` | |
-| M4 — Deployment | _YYYY-MM-DD_ | `pending` | |
+| 01 | Project setup | `done` | |
+| 01 | Landing page | `done` | |
+| 02 | Authentication (backend) | `done` | |
+| 02 | Auth UI (frontend) | `done` | Sin tests automatizados de frontend. |
+| 03 | User registration | `done` | Contraseña mínima de 6 caracteres (la tarea pedía 8). |
+| 03 | Dashboard UI | `done` | |
+| 04 | User login | `done` | |
+| 04 | UI de certificados | `done` | |
+| 05–08 | Empresas (crear, editar, listar, asociar usuario) | `done` | |
+| 09–12 | Clientes (crear, editar, listar, borrar) | `done` | Borrado lógico (IG-4). |
+| 13–15 | Pedidos API (crear, listar, editar) | `done` | Crear y editar vía GraphQL. |
+| 16 | Certificados PDF (backend) | `done` | Falta validar el formato visual con el negocio. |
 
----
+## Jira
 
-## Deployment History
+| Clave | Título | Estado |
+|---|---|---|
+| IG-4 | Soft delete (`deleted_at`) en todos los modelos | `done` |
+| IG-5 | `empresa_id` en certificados (multi-tenancy) | `done` |
+| IG-6 | Paginación por cursor en los listados | `done` |
+| IG-7 | RBAC por módulo: enum de roles y guards | `done` |
+| IG-8 | Eliminar los usos de `any` | `done` |
+| IG-9 | Quitar TypeORM y dependencias sobrantes | `done` |
+| IG-10 | Listar y filtrar pedidos en el dashboard | `done` |
+| IG-11 | Crear pedido desde el dashboard | `done` |
+| IG-12 | Editar pedido desde el dashboard | `done` |
+| IG-13 | Sacar de git PDFs generados y `.DS_Store` | `done` (historial pendiente de decisión) |
+| IG-14 | Actualizar documentación y estado de tareas | `done` |
+| IG-15 | CI con GitHub Actions | `done` |
+| IG-16 | Despliegue (frontend, backend y BD) | `blocked`: configuración lista; falta crear cuenta/servicios en Render y elegir dominio |
 
-| Version | Date | Environment | Deployed by | Notes |
-|---|---|---|---|---|
-| v0.1.0 | _YYYY-MM-DD_ | staging | DevOps Agent | Initial scaffold |
+## Hitos
 
----
+| Hito | Estado |
+|---|---|
+| M1: Auth, empresas y clientes | `done` |
+| M2: Pedidos y certificados | `done` |
+| M3: Calidad (tipado, tests, CI) | `done` |
+| M4: Despliegue público | `blocked` (IG-16) |
 
-## Last Updated
+## Última actualización
 
-- Date: _YYYY-MM-DD_
-- Updated by: _Agent name or human_
+- Fecha: 2026-10-20 (IG-14)

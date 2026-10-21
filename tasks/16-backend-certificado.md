@@ -2,7 +2,7 @@
 
 **Domain:** `[BACKEND]`
 **Assigned Agent:** Backend Agent
-**Status:** `pending`
+**Status:** `done`
 **Created:** 2026-05-07
 **Depends On:** —
 
@@ -151,13 +151,13 @@ Usar la librería `pdfmake` o `puppeteer` con una plantilla HTML. Se recomienda 
 ## Acceptance Criteria
 
 - [ ] El PDF generado es visualmente equivalente al documento Word original
-- [ ] La fecha de emisión se genera automáticamente en el backend (no la envía el frontend)
-- [ ] `punto_nube` solo aparece en la tabla cuando `tipo === 'oleina'`
-- [ ] `Peso:` solo aparece cuando `tipo === 'rbd'` y `peso_kg` tiene valor
-- [ ] El PDF se guarda en disco o storage y se retorna la URL
-- [ ] Los parámetros se persisten en base de datos vinculados al certificado
-- [ ] Validaciones retornan mensajes claros en español
-- [ ] No se puede generar un certificado sin parámetros completos según el tipo
+- [x] La fecha de emisión se genera automáticamente en el backend (no la envía el frontend)
+- [x] `punto_nube` solo aparece en la tabla cuando `tipo === 'oleina'`
+- [x] `Peso:` solo aparece cuando `tipo === 'rbd'` y `peso_kg` tiene valor
+- [x] El PDF se guarda en disco o storage y se retorna la URL
+- [x] Los parámetros se persisten en base de datos vinculados al certificado
+- [x] Validaciones retornan mensajes claros en español
+- [x] No se puede generar un certificado sin parámetros completos según el tipo
 
 ---
 
@@ -184,3 +184,8 @@ backend/src/utils/pdf/
 backend/test/certificados/
   └── certificados.service.spec.ts
 ```
+
+## Estado actual (2026-10-20)
+
+- Certificados separados por empresa (IG-5). PDFs en `CERTIFICADOS_DIR`, fuera de git (IG-13).
+- Pendiente: validar con el negocio que el PDF coincide visualmente con el formato Word original.

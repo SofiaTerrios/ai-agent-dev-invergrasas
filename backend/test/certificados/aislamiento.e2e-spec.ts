@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { rmSync } from 'fs';
+import { mkdtempSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
 import * as path from 'path';
 import { PrismaService } from '../../src/prisma/prisma.service';
 import { createE2EApp, gql, tokenFor } from '../utils/e2e';
@@ -49,7 +50,11 @@ describe('Certificados E2E - aislamiento por empresa', () => {
     };
   };
 
+  // Generated PDFs go to a throwaway folder
+  const pdfDir = mkdtempSync(path.join(tmpdir(), 'certificados-'));
+
   beforeAll(async () => {
+    process.env.CERTIFICADOS_DIR = pdfDir;
     ({ app, prisma } = await createE2EApp());
 
     const [a, b] = await Promise.all(
@@ -101,25 +106,8 @@ describe('Certificados E2E - aislamiento por empresa', () => {
   });
 
   afterAll(async () => {
-    const files = await prisma.certificadoAnalisis.findMany({
-      where: { deleted_at: undefined },
-      select: { archivo_url: true },
-    });
-    for (const { archivo_url } of files) {
-      if (archivo_url) {
-        rmSync(
-          path.join(
-            process.cwd(),
-            'static',
-            'certificados',
-            path.basename(archivo_url),
-          ),
-          {
-            force: true,
-          },
-        );
-      }
-    }
+    rmSync(pdfDir, { recursive: true, force: true });
+    delete process.env.CERTIFICADOS_DIR;
     await app.close();
   });
 

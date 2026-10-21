@@ -1,82 +1,55 @@
-# Project Context
+# Contexto del proyecto
 
-This file stores the high-level context of the current project. All agents must read this file before starting any task to ensure they are aligned with the project's goals, constraints, and conventions.
+Todo agente (humano o IA) debe leer este archivo antes de empezar una tarea.
 
----
+## Proyecto
 
-## Project Name
+**Invergrasas**: sitio público y plataforma interna de operaciones.
 
-> _Fill in the project name here._
+## Negocio
 
-## Project Description
+Invergrasas produce y comercializa grasas y aceites vegetales para la industria alimentaria:
 
-> _One to three sentences describing what this project does and who it is for._
+- oleína de palma;
+- RBD (aceite de palma refinado, blanqueado y desodorizado);
+- otros aceites refinados.
 
-## Business Goals
+Despacha a clientes industriales a granel, en caneca o en balde. Con cada lote emite un **certificado de análisis** con los parámetros de calidad, que firma el área de calidad.
 
-> _List the key outcomes the project must deliver._
+## Objetivos
 
-- Goal 1
-- Goal 2
-- Goal 3
+- Landing pública que presente la empresa y sus productos.
+- Registrar los pedidos/entregas despachados a cada cliente y hacerles seguimiento.
+- Generar certificados de análisis en PDF de forma consistente y trazable.
+- Separar la información por empresa (una instalación puede manejar varias razones sociales) y por rol.
 
-## Target Users
+## Usuarios
 
-> _Describe the primary users of the system._
-
-- User type 1: _description_
-- User type 2: _description_
-
-## Tech Stack
-
-> _List the core technologies used in this project. Keep this in sync with `docs/ARCHITECTURE.md`._
-
-| Layer | Technology |
+| Rol | Qué hace |
 |---|---|
-| Frontend | _e.g., Next.js + TailwindCSS_ |
-| Backend | _e.g., NestJS / Node.js_ |
-| Database | _e.g., PostgreSQL + Prisma_ |
-| Infrastructure | _e.g., Docker + GitHub Actions_ |
-| AI/ML | _e.g., LangGraph + OpenAI_ |
+| `admin` | Gestiona empresas, usuarios y roles; acceso total. |
+| `comercial` | Gestiona clientes y pedidos; consulta certificados. |
+| `calidad` | Genera y consulta certificados de análisis. |
+| `empleado` | Registra y consulta pedidos de sus empresas. |
 
-## Key Constraints
+## Stack
 
-> _List any hard constraints agents must respect when implementing tasks._
+Next.js 16 + NestJS 11 + GraphQL + Prisma 6/PostgreSQL 16 + pdfkit. Detalle en `docs/ARCHITECTURE.md`.
 
-- Constraint 1 (e.g., "Must support mobile-first design")
-- Constraint 2 (e.g., "All APIs must be authenticated")
-- Constraint 3 (e.g., "Deployment target is AWS ECS")
+## Restricciones
 
-## Coding Standards
+- Toda la API requiere autenticación, salvo registro y login.
+- Un usuario solo ve datos de las empresas a las que está asociado (los admin ven todas).
+- Nunca se borran filas: se usa borrado lógico (`deleted_at`).
+- Los PDFs generados no se versionan en git: pueden contener datos de clientes.
+- Cero `any`; lint, typecheck y tests deben pasar en CI.
 
-> _Reference the standards all agents must follow._
+## Convenciones
 
-- Language: _e.g., TypeScript strict mode_
-- Linting: _e.g., ESLint + Prettier_
-- Testing: _e.g., Jest, minimum 80% coverage_
-- Branch naming: `feature/<issue-number>-<short-title>`
-- Commit style: Conventional Commits (`feat:`, `fix:`, `chore:`, etc.)
+- Ramas: `feature/IG-<n>-<descripcion>`.
+- Commits: Conventional Commits con la clave de Jira, p. ej. `feat(IG-10): ...`.
+- Nombres de dominio en español (`empresa`, `pedido`, `certificado`); columnas en `snake_case`.
 
-## Repository Structure
+## Última actualización
 
-> _Brief overview of key folders._
-
-```
-agents/          — AI agent definitions and prompts
-factory/         — Orchestrator and task execution engine
-memory/          — Shared project knowledge (this folder)
-templates/       — Reusable task and spec templates
-tasks/           — Task definitions for agents
-specs/           — Feature specifications
-datasets/        — Seed data and datasets
-scripts/         — ETL and automation scripts
-docs/            — Architecture, roadmap, and ADRs
-ai-dev-team/     — LangGraph automation agents
-```
-
-## Last Updated
-
-> _Date and agent that last updated this file._
-
-- Date: _YYYY-MM-DD_
-- Updated by: _Agent name or human_
+- Fecha: 2026-10-20 (IG-14)

@@ -2,7 +2,17 @@ import { UnauthorizedException } from '@nestjs/common';
 import jwt from 'jsonwebtoken';
 import type { AuthUser } from './request.util';
 
-const JWT_SECRET = process.env.JWT_SECRET ?? 'inver-secret';
+const DEV_SECRET = 'inver-secret';
+
+// Read on use: .env is loaded by ConfigModule after this module is imported.
+export function jwtSecret() {
+  const secret = process.env.JWT_SECRET;
+  if (secret) return secret;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET must be set in production');
+  }
+  return DEV_SECRET;
+}
 
 export type AccessTokenPayload = {
   sub: string;
@@ -12,7 +22,7 @@ export type AccessTokenPayload = {
 };
 
 export function signAccessToken(payload: AccessTokenPayload) {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' });
+  return jwt.sign(payload, jwtSecret(), { expiresIn: '1h' });
 }
 
 const optionalString = (value: unknown) =>
@@ -26,7 +36,7 @@ export function userFromAuthHeader(header: unknown): AuthUser {
 
   let decoded: string | jwt.JwtPayload;
   try {
-    decoded = jwt.verify(header.slice('Bearer '.length), JWT_SECRET);
+    decoded = jwt.verify(header.slice('Bearer '.length), jwtSecret());
   } catch {
     throw new UnauthorizedException('Invalid token');
   }

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { promises as fs } from 'fs';
 import path from 'path';
 import PDFDocument from 'pdfkit';
+import { certificadosDir } from './certificados-dir';
 
 type ParametroFila = {
   nombre: string;
@@ -36,18 +37,13 @@ export class AnalisisPdfService {
   private readonly GRAY = '#555555';
   private readonly LIGHT_BG = '#f0f0f0';
 
-  private readonly outputDir = path.join(
-    process.cwd(),
-    'static',
-    'certificados',
-  );
-
   async generateCertificadoAnalisisPdf(
     input: CreateAnalisisPdfInput,
   ): Promise<string> {
-    await fs.mkdir(this.outputDir, { recursive: true });
+    const outputDir = certificadosDir();
+    await fs.mkdir(outputDir, { recursive: true });
     const fileName = `cert-${input.certificadoId}.pdf`;
-    const filePath = path.join(this.outputDir, fileName);
+    const filePath = path.join(outputDir, fileName);
     const buffer = await this.buildPdf(input);
     await fs.writeFile(filePath, buffer);
     return `/static/certificados/${fileName}`;

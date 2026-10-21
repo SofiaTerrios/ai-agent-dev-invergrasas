@@ -1,0 +1,53 @@
+# Render Blueprint (staging). See docs/DEPLOY.md.
+# Values marked `sync: false` are set in the Render dashboard on first deploy.
+databases:
+  - name: invergrasas-db-staging
+    databaseName: invergrasas
+    user: invergrasas
+    plan: basic-256mb
+    region: virginia
+    postgresMajorVersion: "16"
+
+services:
+  - type: web
+    name: invergrasas-api-staging
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    branch: staging
+    region: virginia
+    plan: starter
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: invergrasas-db-staging
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      # Public URL of the frontend (CORS), e.g. https://app.invergrasas.com
+      - key: FRONTEND_URL
+        sync: false
+      - key: CERTIFICADOS_DIR
+        value: /var/data/certificados
+    # Generated certificado PDFs survive deploys on this disk
+    disk:
+      name: certificados-staging
+      mountPath: /var/data
+      sizeGB: 1
+
+  - type: web
+    name: invergrasas-web-staging
+    runtime: docker
+    rootDir: frontend
+    dockerfilePath: ./Dockerfile
+    branch: staging
+    region: virginia
+    plan: starter
+    healthCheckPath: /
+    envVars:
+      # Public URL of the API, e.g. https://api.invergrasas.com (used at build time)
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
