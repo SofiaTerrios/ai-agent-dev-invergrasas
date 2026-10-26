@@ -1,34 +1,67 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import DashboardLayout from "@/components/layouts/DashboardLayout";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import Button from "@/components/ui/Button";
 import { getSession } from "@/lib/session";
-import { useCertificadoForm } from "./hooks/useCertificadoForm";
-import CertificadoStepper from "./components/CertificadoStepper";
-import StepTipoCertificado from "./components/StepTipoCertificado";
-import StepDatosCliente from "./components/StepDatosCliente";
-import StepDatosLote from "./components/StepDatosLote";
-import StepParametros from "./components/StepParametros";
-import StepFechaVencimiento from "./components/StepFechaVencimiento";
-import StepResumen from "./components/StepResumen";
+import { puede } from "@/lib/permisos";
+import {
+  useCertificadoForm,
+  type CertificadoFormData,
+  type ParametrosForm,
+} from "../hooks/useCertificadoForm";
+import CertificadoStepper from "./CertificadoStepper";
+import StepTipoCertificado from "./StepTipoCertificado";
+import StepDatosCliente from "./StepDatosCliente";
+import StepDatosLote from "./StepDatosLote";
+import StepParametros from "./StepParametros";
+import StepFechaVencimiento from "./StepFechaVencimiento";
+import StepResumen from "./StepResumen";
 import { graphqlRequest } from "@/lib/graphql";
 import { downloadAuthenticatedFile } from "@/lib/api";
-import { gql } from "@apollo/client";
 import { print } from "graphql";
+import {
+  CREATE_CERTIFICADO_MUTATION,
+  GET_CERTIFICADO_QUERY,
+  GET_FIRMANTE_QUERY,
+  type CertificadoDetalle,
+  type Firmante,
+} from "@/graphql/certificados";
 
-const CREATE_CERTIFICADO_MUTATION = gql`
-  mutation CreateCertificado($input: CreateCertificadoInput!) {
-    createCertificado(input: $input) {
-      id
-      archivo_url
-    }
-  }
-`;
+// Form data of an anulado certificado, to correct it (IG-22)
+function desdeCertificado(certificado: CertificadoDetalle): CertificadoFormData {
+  const parametros = Object.fromEntries(
+    certificado.parametros
+      .filter((p) => p.clave)
+      .map((p) => [p.clave, p.valor]),
+  ) as Partial<ParametrosForm>;
+  const vence = certificado.fecha_vencimiento.slice(0, 10);
+  return {
+    tipo: certificado.tipo,
+    empresa_id: certificado.empresa_id ?? "",
+    cliente_id: certificado.cliente_id ?? "",
+    empresa_cliente: certificado.empresa_cliente,
+    nit_cliente: certificado.nit_cliente ?? "",
+    lote: certificado.lote,
+    peso_kg: certificado.peso_kg != null ? String(certificado.peso_kg).replace(".", ",") : "",
+    // A past date has to be chosen again
+    fecha_vencimiento: new Date(vence) > new Date() ? vence : "",
+    parametros: {
+      acidez: parametros.acidez ?? "",
+      humedad: parametros.humedad ?? "",
+      indice_yodo: parametros.indice_yodo ?? "",
+      peroxido: parametros.peroxido ?? "",
+      punto_nube: parametros.punto_nube ?? "",
+      color_amarillo: parametros.color_amarillo ?? "",
+      color_rojo: parametros.color_rojo ?? "",
+    },
+  };
+}
 
-export default function CertificadosPage() {
+export default function NuevoCertificado() {
   const router = useRouter();
+  const reemplazaId = useSearchParams().get("reemplaza");
   const {
     step,
     formData,
@@ -38,6 +71,7 @@ export default function CertificadosPage() {
     setTipo,
     updateFormData,
     updateParametros,
+    loadFormData,
     getApiPayload,
   } = useCertificadoForm();
 
@@ -48,10 +82,38 @@ export default function CertificadosPage() {
     typeof window === "undefined" ? null : getSession(),
   );
   const token = session?.token ?? null;
+  const puedeGenerar = puede(session?.user.rol, "certificados", "escribir");
+  // undefined while loading
+  const [firmante, setFirmante] = useState<Firmante | null | undefined>(undefined);
+  const [reemplazado, setReemplazado] = useState<CertificadoDetalle | null>(null);
 
   useEffect(() => {
     if (!session) router.push("/login");
-  }, [session, router]);
+    else if (!puedeGenerar) router.replace("/dashboard/certificados");
+  }, [session, puedeGenerar, router]);
+
+  useEffect(() => {
+    if (!token) return;
+    graphqlRequest<{ firmanteCertificados: Firmante | null }>(GET_FIRMANTE_QUERY, {}, token)
+      .then((data) => setFirmante(data.firmanteCertificados))
+      .catch(() => setFirmante(null));
+  }, [token]);
+
+  useEffect(() => {
+    if (!token || !reemplazaId) return;
+    graphqlRequest<{ certificado: CertificadoDetalle }>(
+      GET_CERTIFICADO_QUERY,
+      { id: reemplazaId },
+      token,
+    )
+      .then(({ certificado }) => {
+        setReemplazado(certificado);
+        loadFormData(desdeCertificado(certificado));
+      })
+      .catch((err: unknown) =>
+        setApiError(err instanceof Error ? err.message : "No se pudo cargar el certificado"),
+      );
+  }, [token, reemplazaId, loadFormData]);
 
 
   const handleGenerate = async () => {
@@ -61,7 +123,10 @@ export default function CertificadosPage() {
     setApiError(null);
 
     try {
-      const payload = getApiPayload();
+      const payload = {
+        ...getApiPayload(),
+        ...(reemplazado ? { reemplaza_id: reemplazado.id } : {}),
+      };
       const data = await graphqlRequest<{ createCertificado: { id: string; archivo_url: string } }>(
         print(CREATE_CERTIFICADO_MUTATION),
         { input: payload },
@@ -92,7 +157,7 @@ export default function CertificadosPage() {
   };
 
   const handleReset = () => {
-    window.location.reload();
+    window.location.assign("/dashboard/certificados/nuevo");
   };
 
   const renderStep = () => {
@@ -145,24 +210,50 @@ export default function CertificadosPage() {
           />
         );
       case 6:
-        return <StepResumen formData={formData} />;
+        return (
+          <>
+            <StepResumen formData={formData} />
+            {firmante && (
+              <p className="mt-4 text-center text-sm text-[#6B7F75]">
+                Firma: <strong className="text-[#17251F]">{firmante.nombre}</strong>
+              </p>
+            )}
+          </>
+        );
       default:
         return null;
     }
   };
 
   return (
-    <DashboardLayout>
       <div className="mx-auto max-w-4xl space-y-8">
         {/* Header */}
         <div className="border-b border-[#DDE8E2] pb-6">
-          <p className="text-xs font-bold uppercase tracking-[0.32em] text-[#7D8E86]">
-            Operaciones
-          </p>
+          <Link
+            href="/dashboard/certificados"
+            className="text-xs font-bold uppercase tracking-[0.32em] text-[#7D8E86] hover:text-[#0F6E2E]"
+          >
+            ← Certificados
+          </Link>
           <h1 className="mt-2 text-3xl font-black tracking-tight text-[#17251F] md:text-4xl">
-            Generar <span className="text-[#0F6E2E]">Certificado</span>
+            {reemplazaId ? "Corregir" : "Generar"}{" "}
+            <span className="text-[#0F6E2E]">Certificado</span>
           </h1>
         </div>
+
+        {reemplazado && !successData && (
+          <div className="rounded-lg border border-[#F2C8BE] bg-[#FFF8F1] p-4 text-sm text-[#8A4B0F]">
+            Corrige los datos del certificado anulado del lote <strong>{reemplazado.lote}</strong>{" "}
+            ({reemplazado.empresa_cliente}). El nuevo certificado quedará enlazado al anulado.
+          </div>
+        )}
+
+        {firmante === null && !successData && (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+            No hay firmante de certificados configurada. Pide al Super Administrador que la asigne
+            en Certificados antes de generar.
+          </div>
+        )}
 
         {successData ? (
           <div className="rounded-2xl border border-[#DDE8E2] bg-white p-8 text-center shadow-sm md:p-12">
@@ -248,6 +339,5 @@ export default function CertificadosPage() {
           </div>
         )}
       </div>
-    </DashboardLayout>
   );
 }

@@ -128,7 +128,6 @@ export default function UsuarioFormModal({ usuario, onClose, onSuccess, token }:
   };
 
   const preview = firma === undefined ? firmaActual : firma;
-  const showFirma = values.rol === "entrega" || Boolean(preview);
 
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -287,11 +286,13 @@ export default function UsuarioFormModal({ usuario, onClose, onSuccess, token }:
               )}
             </fieldset>
 
-            {showFirma && (
-              <div className="space-y-2">
+            <div className="space-y-2">
                 <label htmlFor="usuario-firma" className="block text-sm font-medium text-[#1B4D1E]">
-                  Firma (para los recibos de entrega)
+                  Firma (opcional)
                 </label>
+                <p className="text-xs text-[#83948D]">
+                  La usan los recibos de entrega y la firmante de los certificados.
+                </p>
                 {preview && (
                   <div className="flex items-center gap-3 rounded-lg border border-[#DDE8E2] p-2">
                     {/* eslint-disable-next-line @next/next/no-img-element -- data URL preview */}
@@ -315,8 +316,7 @@ export default function UsuarioFormModal({ usuario, onClose, onSuccess, token }:
                 />
                 <p className="text-xs text-[#83948D]">PNG o JPEG, máximo 300 KB.</p>
                 <FormError message={errors.firma} />
-              </div>
-            )}
+            </div>
 
             <FormError message={submitError} />
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 export type CertificadoTipo = "oleina" | "rbd";
 
@@ -66,6 +66,12 @@ export function useCertificadoForm() {
     }));
     setErrors({});
   };
+
+  // Fills the whole form, e.g. from an anulado certificado to correct it
+  const loadFormData = useCallback((data: CertificadoFormData) => {
+    setFormData(data);
+    setErrors({});
+  }, []);
 
   const setTipo = (tipo: CertificadoTipo) => {
     setFormData((prev) => ({
@@ -181,6 +187,7 @@ export function useCertificadoForm() {
     setStep,
     updateFormData,
     updateParametros,
+    loadFormData,
     setTipo,
     nextStep,
     prevStep,

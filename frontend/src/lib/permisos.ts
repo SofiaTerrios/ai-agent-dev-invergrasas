@@ -44,6 +44,8 @@ const PERMISOS = {
   certificados: {
     leer: ["admin", "calidad", "comercial"],
     escribir: ["admin", "calidad"],
+    anular: ["admin", "calidad"],
+    configurarFirmante: [],
   },
 } as const satisfies Record<string, Record<string, readonly Rol[]>>;
 

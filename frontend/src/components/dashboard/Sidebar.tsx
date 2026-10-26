@@ -41,7 +41,12 @@ const navGroups: NavGroup[] = [
     title: "Operaciones",
     items: [
       { href: "/dashboard/pedidos", label: "Pedidos", icon: Truck },
-      { href: "/dashboard/certificados", label: "Certificados", icon: FileBadge },
+      {
+        href: "/dashboard/certificados",
+        label: "Certificados",
+        icon: FileBadge,
+        visible: (rol) => puede(rol, "certificados", "leer"),
+      },
     ],
   },
   {
@@ -144,7 +149,9 @@ export default function Sidebar({
                 </p>
               )}
               {items.map((item) => {
-                const isActive = pathname === item.href;
+                const isActive =
+                  pathname === item.href ||
+                  (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`));
                 const Icon = item.icon;
 
                 return (
