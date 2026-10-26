@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { clearSession, getUserInitials, type SessionUser } from "@/lib/session";
+import { puede, rolLabel } from "@/lib/permisos";
 import Image from "next/image";
 import {
   LayoutDashboard,
@@ -10,6 +11,7 @@ import {
   Truck,
   Building2,
   Users,
+  UserCog,
   LogOut,
   X,
 } from "lucide-react";
@@ -19,13 +21,13 @@ type NavItem = {
   label: string;
   icon: React.ElementType;
   badge?: number;
-  adminOnly?: boolean;
+  // Shown only when the user's role passes this check
+  visible?: (rol?: string) => boolean;
 };
 
 type NavGroup = {
   title: string;
   items: NavItem[];
-  adminOnly?: boolean;
 };
 
 const navGroups: NavGroup[] = [
@@ -44,11 +46,26 @@ const navGroups: NavGroup[] = [
   },
   {
     title: "Administración",
-    adminOnly: true,
     items: [
-      { href: "/dashboard/empresas", label: "Empresas", icon: Building2, adminOnly: true },
-      { href: "/dashboard/clientes", label: "Clientes", icon: Users, adminOnly: true },
-   ],
+      {
+        href: "/dashboard/empresas",
+        label: "Empresas",
+        icon: Building2,
+        visible: (rol) => puede(rol, "empresas", "editar"),
+      },
+      {
+        href: "/dashboard/clientes",
+        label: "Clientes",
+        icon: Users,
+        visible: (rol) => puede(rol, "clientes", "leerTodos"),
+      },
+      {
+        href: "/dashboard/usuarios",
+        label: "Usuarios",
+        icon: UserCog,
+        visible: (rol) => puede(rol, "usuarios", "gestionar"),
+      },
+    ],
   },
 ];
 
@@ -114,7 +131,10 @@ export default function Sidebar({
         aria-label="Navegación dashboard"
       >
         {navGroups.map((group) => {
-          if (group.adminOnly && user?.rol !== "admin") return null;
+          const items = group.items.filter(
+            (item) => !item.visible || item.visible(user?.rol),
+          );
+          if (items.length === 0) return null;
 
           return (
             <div key={group.title} className="flex flex-col gap-1">
@@ -123,8 +143,7 @@ export default function Sidebar({
                   {group.title}
                 </p>
               )}
-              {group.items.map((item) => {
-                if (item.adminOnly && user?.rol !== "admin") return null;
+              {items.map((item) => {
                 const isActive = pathname === item.href;
                 const Icon = item.icon;
 
@@ -181,7 +200,7 @@ export default function Sidebar({
             <>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[13px] font-medium text-[#17251F]">{userName}</p>
-                <p className="text-[11px] text-[#6B7F75]">Mi cuenta</p>
+                <p className="text-[11px] text-[#6B7F75]">{rolLabel(user?.rol)}</p>
               </div>
               <button
                 type="button"

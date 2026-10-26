@@ -23,6 +23,7 @@ const LOGIN_MUTATION = `
         nombre
         email
         rol
+        debe_cambiar_password
       }
     }
   }
@@ -75,7 +76,9 @@ export default function LoginForm() {
       }>(LOGIN_MUTATION, { input: values });
 
       saveSession(payload.login.access_token, payload.login.user ?? {});
-      router.push("/dashboard");
+      router.push(
+        payload.login.user?.debe_cambiar_password ? "/cambiar-password" : "/dashboard",
+      );
     } catch (error) {
       setSubmitError(
         error instanceof Error

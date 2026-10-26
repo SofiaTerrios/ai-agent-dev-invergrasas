@@ -3,6 +3,8 @@ export type SessionUser = {
   nombre?: string;
   email?: string;
   rol?: string;
+  // The user must set a new password before using the dashboard
+  debe_cambiar_password?: boolean;
 };
 
 const TOKEN_KEY = "invergrasas_access_token";
@@ -14,6 +16,13 @@ export function saveSession(token: string, user: SessionUser) {
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(USER_KEY, JSON.stringify(user ?? {}));
   localStorage.setItem(EXPIRES_KEY, String(Date.now() + SESSION_DURATION_MS));
+}
+
+// Updates the stored user without touching the token or its expiry.
+export function updateSessionUser(changes: Partial<SessionUser>) {
+  const session = getSession();
+  if (!session) return;
+  localStorage.setItem(USER_KEY, JSON.stringify({ ...session.user, ...changes }));
 }
 
 export function clearSession() {

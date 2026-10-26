@@ -24,6 +24,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       router.replace("/login");
       return;
     }
+    if (session.user.debe_cambiar_password) {
+      router.replace("/cambiar-password");
+      return;
+    }
 
     const timeout = window.setTimeout(() => {
       router.replace("/login");
@@ -32,7 +36,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     return () => window.clearTimeout(timeout);
   }, [router, session]);
 
-  if (!session) {
+  if (!session || session.user.debe_cambiar_password) {
     return (
       <div className="grid min-h-screen place-items-center bg-[#F4F8F5] text-sm font-medium text-[#486358]">
         Cargando dashboard...

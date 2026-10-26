@@ -20,6 +20,7 @@ import {
   type Cliente,
 } from "@/graphql/clientes";
 import { getSession } from "@/lib/session";
+import { puede } from "@/lib/permisos";
 
 export default function ClientesModule() {
   const router = useRouter();
@@ -38,9 +39,9 @@ export default function ClientesModule() {
   );
   const token = session?.token;
   const user = session?.user;
-  const isAdmin = user?.rol === "admin";
+  const isAdmin = puede(user?.rol, "clientes", "leerTodos");
 
-  // Redirect if not admin
+  // Redirect if the role cannot list every cliente
   useEffect(() => {
     if (session && !isAdmin) {
       router.replace("/dashboard");

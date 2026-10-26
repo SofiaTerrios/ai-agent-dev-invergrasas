@@ -16,6 +16,7 @@ import {
 } from "@/lib/graphql";
 import { GET_EMPRESAS_QUERY, type Empresa } from "@/graphql/empresas";
 import { getSession } from "@/lib/session";
+import { puede } from "@/lib/permisos";
 
 export default function EmpresasModule() {
   const router = useRouter();
@@ -33,9 +34,10 @@ export default function EmpresasModule() {
   );
   const token = session?.token;
   const user = session?.user;
-  const isAdmin = user?.rol === "admin";
+  const isAdmin = puede(user?.rol, "empresas", "editar");
+  const puedeCrear = puede(user?.rol, "empresas", "crear");
 
-  // Redirect if not admin
+  // Redirect if the role cannot manage empresas
   useEffect(() => {
     if (session && !isAdmin) {
       router.replace("/dashboard");
@@ -156,9 +158,11 @@ export default function EmpresasModule() {
             Empresas
           </h1>
         </div>
-        <Button onClick={() => setIsCreateModalOpen(true)}>
-          + Nueva Empresa
-        </Button>
+        {puedeCrear && (
+          <Button onClick={() => setIsCreateModalOpen(true)}>
+            + Nueva Empresa
+          </Button>
+        )}
       </div>
 
       {/* Stats */}
