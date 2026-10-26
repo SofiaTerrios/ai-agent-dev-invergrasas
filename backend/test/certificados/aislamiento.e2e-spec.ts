@@ -69,13 +69,7 @@ describe('Certificados E2E - aislamiento por empresa', () => {
     empresaB = b.id;
     clienteB = (
       await prisma.cliente.create({
-        data: {
-          nombre: 'Cliente B',
-          contacto: 'x',
-          telefono: '1',
-          correo: 'b@test.com',
-          empresa_id: empresaB,
-        },
+        data: { razon_social: 'Cliente B', empresa_id: empresaB },
       })
     ).id;
 

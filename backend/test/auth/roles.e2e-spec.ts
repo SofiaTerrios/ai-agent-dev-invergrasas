@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { Rol } from '@prisma/client';
 import { PrismaService } from '../../src/prisma/prisma.service';
-import { createE2EApp, gql, tokenFor } from '../utils/e2e';
+import { ciudad, createE2EApp, gql, tokenFor } from '../utils/e2e';
 
 const CREATE_EMPRESA = `
   mutation($input: CreateEmpresaInput!) { createEmpresa(input: $input) { id } }
@@ -23,9 +23,11 @@ describe('RBAC E2E', () => {
   const tokens = {} as Record<Rol, string>;
   const ids = {} as Record<Rol, string>;
   let empresaId: string;
+  let bogotaId: string;
 
   beforeAll(async () => {
     ({ app, prisma } = await createE2EApp());
+    bogotaId = (await ciudad(prisma)).id;
     empresaId = (
       await prisma.empresa.create({
         data: { razon_social: 'Empresa RBAC', nit: 'RBAC-1' },
@@ -48,12 +50,22 @@ describe('RBAC E2E', () => {
     await app.close();
   });
 
+  // A different valid NIT per role, so each create would succeed if allowed
+  const NITS: Record<string, string> = {
+    comercial: '901684306',
+    calidad: '800197268',
+  };
   const clienteInput = (nombre: string) => ({
-    nombre,
-    contacto: 'x',
-    telefono: '1',
-    correo: `${nombre}@rbac.test`,
+    razon_social: nombre,
+    nit: NITS[nombre],
     empresa_id: empresaId,
+    ciudad_id: bogotaId,
+    tipos: ['GENERADOR'],
+    sede_principal: {
+      nombre: 'Principal',
+      direccion: 'Calle 1',
+      ciudad_id: bogotaId,
+    },
   });
 
   describe('GraphQL', () => {
@@ -134,14 +146,6 @@ describe('RBAC E2E', () => {
         .post('/api/empresas')
         .send({ razon_social: 'W', nit: 'RBAC-W' })
         .expect(401);
-    });
-
-    it('protects clientes REST endpoints', async () => {
-      await request(app.getHttpServer())
-        .post('/clientes')
-        .set('Authorization', `Bearer ${tokens.empleado}`)
-        .send(clienteInput('empleado'))
-        .expect(403);
     });
   });
 

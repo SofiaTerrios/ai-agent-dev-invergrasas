@@ -1,122 +1,175 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { ClientesService } from './clientes.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { CatalogosService } from '../catalogos/catalogos.service';
+import { CreateClienteInput } from '../graphql/inputs';
+import { TipoEmpresa } from '../graphql/enums';
+
+const EMPRESA = 'empresa-a';
+const comercial = { id: 'user-1', rol: 'comercial' };
+
+const cliente = (overrides: Record<string, unknown> = {}) => ({
+  id: 'c1',
+  empresa_id: EMPRESA,
+  razon_social: 'Panadería',
+  nit: '901684306',
+  ciudad_id: 'bogota',
+  sedes: [],
+  contactos: [],
+  ...overrides,
+});
+
+const createPrismaMock = () => {
+  const prisma = {
+    cliente: {
+      findUnique: jest.fn(),
+      findMany: jest.fn().mockResolvedValue([]),
+      count: jest.fn().mockResolvedValue(0),
+      create: jest.fn().mockResolvedValue({ id: 'c1' }),
+      update: jest.fn(),
+    },
+    sede: {
+      findUnique: jest.fn(),
+      update: jest.fn(),
+    },
+    userEmpresa: {
+      findUnique: jest.fn().mockResolvedValue({ id: 'link' }),
+      findMany: jest.fn().mockResolvedValue([{ empresa_id: EMPRESA }]),
+    },
+    $transaction: jest.fn(),
+  };
+  prisma.$transaction.mockImplementation((fn: (tx: unknown) => unknown) =>
+    fn(prisma),
+  );
+  return prisma;
+};
 
 describe('ClientesService', () => {
+  let prisma: ReturnType<typeof createPrismaMock>;
   let service: ClientesService;
-  let prisma: {
-    empresa: { findUnique: jest.Mock };
-    cliente: {
-      create: jest.Mock;
-      findUnique: jest.Mock;
-      findMany: jest.Mock;
-      update: jest.Mock;
-      delete: jest.Mock;
-    };
-  };
 
-  const clienteData = {
-    nombre: 'Client Name',
-    contacto: 'Contact Person',
-    telefono: '1234567890',
-    correo: 'client@example.com',
-    empresa_id: 'empresa-uuid',
-  };
+  const input = (): CreateClienteInput => ({
+    empresa_id: EMPRESA,
+    razon_social: '  Panadería   La Espiga ',
+    nit: '901.684.306-1',
+    ciudad_id: 'bogota',
+    tipos: [TipoEmpresa.GENERADOR, TipoEmpresa.GENERADOR],
+    sede_principal: {
+      nombre: 'Principal',
+      direccion: 'Calle 1 # 2-3',
+      ciudad_id: 'bogota',
+    },
+  });
 
-  beforeEach(async () => {
-    prisma = {
-      empresa: { findUnique: jest.fn() },
-      cliente: {
-        create: jest.fn(),
-        findUnique: jest.fn(),
-        findMany: jest.fn(),
-        update: jest.fn(),
-        delete: jest.fn(),
-      },
-    };
-
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        ClientesService,
-        { provide: PrismaService, useValue: prisma },
-      ],
-    }).compile();
-
-    service = module.get<ClientesService>(ClientesService);
+  beforeEach(() => {
+    prisma = createPrismaMock();
+    const catalogos = {
+      assertCiudad: jest.fn(),
+      assertActividad: jest.fn(),
+    } as unknown as CatalogosService;
+    service = new ClientesService(
+      prisma as unknown as PrismaService,
+      catalogos,
+    );
   });
 
   describe('create', () => {
-    it('creates a cliente when empresa exists', async () => {
-      const created = { id: 'cliente-uuid', ...clienteData };
-      prisma.empresa.findUnique.mockResolvedValue({ id: 'empresa-uuid' });
-      prisma.cliente.create.mockResolvedValue(created);
+    it('stores the NIT digits with its DV and creates the principal sede', async () => {
+      prisma.cliente.findUnique
+        .mockResolvedValueOnce(null) // NIT is free
+        .mockResolvedValueOnce(cliente()); // findOne after creating
 
-      await expect(service.create(clienteData)).resolves.toEqual(created);
-      expect(prisma.cliente.create).toHaveBeenCalledWith({ data: clienteData });
+      await service.create(comercial, input());
+
+      expect(prisma.cliente.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          razon_social: 'Panadería La Espiga',
+          nit: '901684306',
+          dv: '1',
+          tipos: [TipoEmpresa.GENERADOR],
+          sedes: {
+            create: expect.objectContaining({
+              nombre: 'Principal',
+              principal: true,
+            }) as unknown,
+          },
+        }) as unknown,
+      });
     });
 
-    it('throws NotFoundException when empresa does not exist', async () => {
-      prisma.empresa.findUnique.mockResolvedValue(null);
+    it('rejects a NIT already used in the empresa', async () => {
+      prisma.cliente.findUnique.mockResolvedValueOnce(cliente());
 
-      await expect(service.create(clienteData)).rejects.toThrow(
-        NotFoundException,
+      await expect(service.create(comercial, input())).rejects.toThrow(
+        ConflictException,
       );
       expect(prisma.cliente.create).not.toHaveBeenCalled();
     });
-  });
 
-  describe('update', () => {
-    it('updates a cliente when it exists', async () => {
-      prisma.cliente.findUnique.mockResolvedValue({ id: 'c1', ...clienteData });
-      prisma.cliente.update.mockResolvedValue({ id: 'c1', nombre: 'Nuevo' });
-
-      await service.update('c1', { nombre: 'Nuevo' });
-
-      expect(prisma.cliente.update).toHaveBeenCalledWith({
-        where: { id: 'c1' },
-        data: { nombre: 'Nuevo' },
-      });
-      expect(prisma.empresa.findUnique).not.toHaveBeenCalled();
-    });
-
-    it('throws NotFoundException when cliente does not exist', async () => {
-      prisma.cliente.findUnique.mockResolvedValue(null);
-
-      await expect(service.update('nope', { nombre: 'X' })).rejects.toThrow(
-        NotFoundException,
-      );
-    });
-
-    it('throws NotFoundException when moving to a non-existent empresa', async () => {
-      prisma.cliente.findUnique.mockResolvedValue({ id: 'c1', ...clienteData });
-      prisma.empresa.findUnique.mockResolvedValue(null);
+    it('requires at least one tipo', async () => {
+      prisma.cliente.findUnique.mockResolvedValueOnce(null);
 
       await expect(
-        service.update('c1', { empresa_id: 'other-empresa' }),
-      ).rejects.toThrow(NotFoundException);
-      expect(prisma.cliente.update).not.toHaveBeenCalled();
+        service.create(comercial, { ...input(), tipos: [] }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
-  describe('remove', () => {
-    it('soft deletes the cliente instead of deleting the row', async () => {
-      prisma.cliente.findUnique.mockResolvedValue({ id: 'c1', ...clienteData });
+  it('hides clientes of other empresas as not found', async () => {
+    prisma.cliente.findUnique.mockResolvedValue(
+      cliente({ empresa_id: 'empresa-b' }),
+    );
 
-      await service.remove('c1');
+    await expect(service.findOne(comercial, 'c1')).rejects.toThrow(
+      NotFoundException,
+    );
+    await expect(service.remove(comercial, 'c1')).rejects.toThrow(
+      NotFoundException,
+    );
+    expect(prisma.cliente.update).not.toHaveBeenCalled();
+  });
 
-      expect(prisma.cliente.update).toHaveBeenCalledWith({
-        where: { id: 'c1' },
-        data: { deleted_at: expect.any(Date) },
+  it('lists only clientes of the user empresas, by name or NIT', async () => {
+    await service.list(comercial, { search: '901.684' });
+
+    expect(prisma.cliente.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          empresa_id: { in: [EMPRESA] },
+          OR: [
+            { razon_social: { contains: '901.684', mode: 'insensitive' } },
+            { nit: { startsWith: '901684' } },
+          ],
+        },
+      }),
+    );
+  });
+
+  describe('sede principal', () => {
+    beforeEach(() => {
+      prisma.sede.findUnique.mockResolvedValue({
+        id: 's1',
+        cliente_id: 'c1',
+        principal: true,
       });
-      expect(prisma.cliente.delete).not.toHaveBeenCalled();
+      prisma.cliente.findUnique.mockResolvedValue(cliente());
     });
 
-    it('throws NotFoundException when cliente does not exist', async () => {
-      prisma.cliente.findUnique.mockResolvedValue(null);
+    it('cannot stop being principal without choosing another one', async () => {
+      await expect(
+        service.updateSede(comercial, 's1', { principal: false }),
+      ).rejects.toThrow(/siempre debe haber una/);
+    });
 
-      await expect(service.remove('nope')).rejects.toThrow(NotFoundException);
-      expect(prisma.cliente.update).not.toHaveBeenCalled();
+    it('cannot be deactivated', async () => {
+      await expect(service.deleteSede(comercial, 's1')).rejects.toThrow(
+        /sede principal/,
+      );
+      expect(prisma.sede.update).not.toHaveBeenCalled();
     });
   });
 });

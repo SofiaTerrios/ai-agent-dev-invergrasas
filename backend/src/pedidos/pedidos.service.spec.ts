@@ -75,7 +75,7 @@ describe('PedidosService', () => {
       creado_por: 'user-1',
       cantidad_kg: decimal(100.5),
       fecha: new Date(payload.fecha),
-      cliente: { id: payload.cliente_id, nombre: 'Cliente Uno' },
+      cliente: { id: payload.cliente_id, razon_social: 'Cliente Uno' },
     };
 
     prisma.empresa.findUnique.mockResolvedValue({ id: payload.empresa_id });
@@ -97,7 +97,7 @@ describe('PedidosService', () => {
       include: { cliente: true },
     });
     expect(res.cantidad_kg).toBe(100.5);
-    expect(res.cliente.nombre).toBe('Cliente Uno');
+    expect(res.cliente.razon_social).toBe('Cliente Uno');
   });
 
   it('throws on non-existent empresa when creating', async () => {
@@ -200,7 +200,7 @@ describe('PedidosService', () => {
           tipo_empaque: 'Granel',
           cantidad_kg: decimal(150),
           fecha: new Date('2026-03-15'),
-          cliente: { id: 'cliente-1', nombre: 'Cliente Uno' },
+          cliente: { id: 'cliente-1', razon_social: 'Cliente Uno' },
         },
       ]);
 
@@ -227,7 +227,7 @@ describe('PedidosService', () => {
       });
       expect(res.edges).toHaveLength(1);
       expect(res.edges[0].node.cantidad_kg).toBe(150);
-      expect(res.edges[0].node.cliente.nombre).toBe('Cliente Uno');
+      expect(res.edges[0].node.cliente.razon_social).toBe('Cliente Uno');
     });
 
     it('limits results to pedidos from associated empresas only', async () => {

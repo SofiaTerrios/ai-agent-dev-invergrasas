@@ -13,6 +13,8 @@ import { PrismaModule } from './prisma/prisma.module';
 import { CertificadosModule } from './certificados/certificados.module';
 import { AuditoriaModule } from './auditoria/auditoria.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
+import { CatalogosModule } from './catalogos/catalogos.module';
+import { VehiculosModule } from './vehiculos/vehiculos.module';
 
 @Module({
   imports: [
@@ -33,10 +35,12 @@ import { UsuariosModule } from './usuarios/usuarios.module';
     AuditoriaModule,
     AuthModule,
     UsuariosModule,
+    CatalogosModule,
     EmpresasModule,
     ClientesModule,
     PedidosModule,
     CertificadosModule,
+    VehiculosModule,
   ],
   controllers: [AppController],
   providers: [AppService],

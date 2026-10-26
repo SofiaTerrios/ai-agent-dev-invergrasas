@@ -23,3 +23,11 @@ export enum CertificadoTipo {
   oleina = 'oleina',
   rbd = 'rbd',
 }
+
+// Mirrors the Prisma `TipoEmpresa` enum: roles of a cliente (IG-36)
+export enum TipoEmpresa {
+  GENERADOR = 'GENERADOR',
+  TRANSPORTADOR = 'TRANSPORTADOR',
+  DESTINO = 'DESTINO',
+  GESTOR = 'GESTOR',
+}

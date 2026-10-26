@@ -6,13 +6,20 @@ import {
   ObjectType,
   registerEnumType,
 } from '@nestjs/graphql';
-import { CertificadoTipo, Producto, Role, TipoEmpaque } from './enums';
+import {
+  CertificadoTipo,
+  Producto,
+  Role,
+  TipoEmpaque,
+  TipoEmpresa,
+} from './enums';
 import { ConnectionType } from '../common/pagination';
 
 registerEnumType(Role, { name: 'Role' });
 registerEnumType(Producto, { name: 'Producto' });
 registerEnumType(TipoEmpaque, { name: 'TipoEmpaque' });
 registerEnumType(CertificadoTipo, { name: 'CertificadoTipo' });
+registerEnumType(TipoEmpresa, { name: 'TipoEmpresa' });
 
 @ObjectType()
 export class UserModel {
@@ -68,6 +75,97 @@ export class EmpresaModel {
   created_at!: Date;
 }
 
+// ── Datos maestros (IG-35, IG-26, IG-36, IG-37, IG-38, IG-40) ──────────────
+
+@ObjectType()
+export class CiudadModel {
+  @Field(() => ID)
+  id!: string;
+
+  @Field()
+  codigo_dane!: string;
+
+  @Field()
+  nombre!: string;
+
+  @Field()
+  departamento!: string;
+}
+
+@ObjectType()
+export class ActividadEconomicaModel {
+  @Field(() => ID)
+  id!: string;
+
+  @Field()
+  nombre!: string;
+}
+
+@ObjectType()
+export class TipoEmpaqueModel {
+  @Field(() => ID)
+  id!: string;
+
+  @Field()
+  nombre!: string;
+
+  @Field(() => Float, { nullable: true })
+  capacidad?: number | null;
+
+  @Field(() => String, { nullable: true })
+  unidad?: string | null;
+
+  @Field({ description: 'Cuenta en el inventario de envases por cliente' })
+  retornable!: boolean;
+}
+
+@ObjectType()
+export class ProductoModel {
+  @Field(() => ID)
+  id!: string;
+
+  @Field()
+  nombre!: string;
+
+  @Field(() => String, { nullable: true })
+  descripcion?: string | null;
+
+  @Field(() => [TipoEmpaqueModel], {
+    description: 'Empaques en los que se puede entregar',
+  })
+  empaques!: TipoEmpaqueModel[];
+}
+
+@ObjectType()
+export class ClienteResumenModel {
+  @Field(() => ID)
+  id!: string;
+
+  @Field()
+  razon_social!: string;
+}
+
+@ObjectType()
+export class VehiculoModel {
+  @Field(() => ID)
+  id!: string;
+
+  @Field(() => ID)
+  empresa_id!: string;
+
+  @Field(() => ID)
+  transportador_id!: string;
+
+  @Field(() => ClienteResumenModel)
+  transportador!: ClienteResumenModel;
+
+  @Field({ description: 'Formato "ABC 123"' })
+  placa!: string;
+
+  @Field(() => String, { nullable: true })
+  descripcion?: string | null;
+}
+
 // User as seen from the user management module (super admin)
 @ObjectType()
 export class UsuarioModel {
@@ -101,29 +199,126 @@ export class UsuarioModel {
   @Field(() => [EmpresaModel])
   empresas!: EmpresaModel[];
 
+  @Field(() => VehiculoModel, {
+    nullable: true,
+    description: 'Se precarga en los movimientos del conductor (IG-40)',
+  })
+  vehiculo_por_defecto?: VehiculoModel | null;
+
   @Field()
   created_at!: Date;
 }
 
+@ObjectType()
+export class SedeModel {
+  @Field(() => ID)
+  id!: string;
+
+  @Field(() => ID)
+  cliente_id!: string;
+
+  @Field()
+  nombre!: string;
+
+  @Field(() => ActividadEconomicaModel, { nullable: true })
+  actividad_economica?: ActividadEconomicaModel | null;
+
+  @Field(() => String, { nullable: true })
+  direccion?: string | null;
+
+  @Field(() => String, { nullable: true })
+  telefono?: string | null;
+
+  @Field(() => String, { nullable: true })
+  barrio?: string | null;
+
+  @Field(() => String, { nullable: true })
+  localidad?: string | null;
+
+  @Field(() => String, { nullable: true })
+  email?: string | null;
+
+  @Field(() => CiudadModel, { nullable: true })
+  ciudad?: CiudadModel | null;
+
+  @Field()
+  principal!: boolean;
+
+  @Field({ description: 'false cuando la sede está desactivada' })
+  activa!: boolean;
+}
+
+@ObjectType()
+export class ContactoModel {
+  @Field(() => ID)
+  id!: string;
+
+  @Field(() => ID)
+  cliente_id!: string;
+
+  @Field(() => ID, { nullable: true })
+  sede_id?: string | null;
+
+  @Field()
+  nombre!: string;
+
+  @Field(() => String, { nullable: true })
+  documento?: string | null;
+
+  @Field(() => String, { nullable: true })
+  cargo?: string | null;
+
+  @Field(() => String, { nullable: true })
+  telefono?: string | null;
+
+  @Field(() => String, { nullable: true })
+  email?: string | null;
+}
+
+// Empresa con la que trabaja Invergrasas (IG-36)
 @ObjectType()
 export class ClienteModel {
   @Field(() => ID)
   id!: string;
 
   @Field()
-  nombre!: string;
+  razon_social!: string;
 
-  @Field()
-  contacto!: string;
+  @Field(() => String, { nullable: true, description: 'Solo dígitos' })
+  nit?: string | null;
 
-  @Field()
-  telefono!: string;
+  @Field(() => String, {
+    nullable: true,
+    description: 'Dígito de verificación',
+  })
+  dv?: string | null;
 
-  @Field()
-  correo!: string;
+  @Field(() => String, {
+    nullable: true,
+    description: 'Registro ambiental o sanitario',
+  })
+  registro?: string | null;
+
+  @Field(() => CiudadModel, { nullable: true })
+  ciudad?: CiudadModel | null;
+
+  @Field(() => [TipoEmpresa])
+  tipos!: TipoEmpresa[];
 
   @Field()
   empresa_id!: string;
+
+  @Field({
+    description:
+      'Cliente migrado al que le faltan NIT, ciudad o la dirección de la sede principal',
+  })
+  datos_incompletos!: boolean;
+
+  @Field(() => [SedeModel], { description: 'Sedes activas' })
+  sedes!: SedeModel[];
+
+  @Field(() => [ContactoModel], { description: 'Contactos activos' })
+  contactos!: ContactoModel[];
 
   @Field()
   created_at!: Date;
@@ -158,8 +353,8 @@ export class PedidoModel {
   @Field()
   created_at!: Date;
 
-  @Field(() => ClienteModel, { nullable: true })
-  cliente?: ClienteModel;
+  @Field(() => ClienteResumenModel, { nullable: true })
+  cliente?: ClienteResumenModel;
 }
 
 @ObjectType()

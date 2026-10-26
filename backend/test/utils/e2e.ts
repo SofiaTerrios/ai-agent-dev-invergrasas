@@ -3,7 +3,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import { randomUUID } from 'crypto';
-import { Rol } from '@prisma/client';
+import { Prisma, Rol } from '@prisma/client';
 import { AppModule } from '../../src/app.module';
 import { PrismaService } from '../../src/prisma/prisma.service';
 
@@ -34,7 +34,7 @@ export async function createE2EApp() {
 
 export async function resetDatabase(prisma: PrismaService) {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE TABLE configuracion, audit_logs, parametros_analisis, certificados_analisis, pedidos, clientes, user_empresas, empresas, users CASCADE',
+    'TRUNCATE TABLE configuracion, audit_logs, parametros_analisis, certificados_analisis, pedidos, vehiculos, contactos, sedes, clientes, user_empresas, empresas, users CASCADE',
   );
 }
 
@@ -94,15 +94,26 @@ export function createEmpresa(
   });
 }
 
-export function createCliente(prisma: PrismaService, empresa_id: string) {
+// Cliente with its principal sede, as created from the dashboard
+export function createCliente(
+  prisma: PrismaService,
+  empresa_id: string,
+  data: Partial<Prisma.ClienteUncheckedCreateInput> = {},
+) {
   return prisma.cliente.create({
     data: {
-      nombre: `Cliente ${randomUUID()}`,
-      contacto: 'Contacto',
-      telefono: '123',
-      correo: 'cliente@e2e.test',
+      razon_social: `Cliente ${randomUUID()}`,
       empresa_id,
+      sedes: { create: { nombre: 'Principal', principal: true } },
+      ...data,
     },
+  });
+}
+
+// Ciudad loaded by the migration (DIVIPOLA)
+export function ciudad(prisma: PrismaService, codigoDane = '11001') {
+  return prisma.ciudad.findUniqueOrThrow({
+    where: { codigo_dane: codigoDane },
   });
 }
 

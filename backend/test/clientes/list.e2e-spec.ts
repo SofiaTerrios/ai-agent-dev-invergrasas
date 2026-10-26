@@ -6,7 +6,7 @@ import { createE2EApp, gql, GqlResponse, tokenFor } from '../utils/e2e';
 const LIST = `
   query($empresaId: ID!, $first: Int, $after: String) {
     clientesByEmpresa(empresaId: $empresaId, first: $first, after: $after) {
-      edges { cursor node { id nombre } }
+      edges { cursor node { id razon_social } }
       pageInfo { endCursor hasNextPage }
       totalCount
     }
@@ -15,7 +15,7 @@ const LIST = `
 
 type ClientesPage = {
   clientesByEmpresa: {
-    edges: { cursor: string; node: { id: string; nombre: string } }[];
+    edges: { cursor: string; node: { id: string; razon_social: string } }[];
     pageInfo: { endCursor: string | null; hasNextPage: boolean };
     totalCount: number;
   };
@@ -45,22 +45,17 @@ describe('Clientes E2E - List (cursor pagination)', () => {
       })
     ).id;
 
-    // Same created_at for all rows to make sure the id tiebreaker keeps the order stable
-    const created_at = new Date('2026-01-01T00:00:00Z');
+    // Repeated names make sure the id tiebreaker keeps the order stable
     await prisma.cliente.createMany({
       data: Array.from({ length: 5 }, (_, i) => ({
-        nombre: `Cliente ${i}`,
-        contacto: 'x',
-        telefono: '1',
-        correo: `c${i}@test.com`,
+        razon_social: `Cliente ${i % 2}`,
         empresa_id: empresaId,
-        created_at,
       })),
     });
     ids = (
       await prisma.cliente.findMany({
         where: { empresa_id: empresaId },
-        orderBy: { id: 'desc' },
+        orderBy: [{ razon_social: 'asc' }, { id: 'asc' }],
       })
     ).map((c) => c.id);
   });

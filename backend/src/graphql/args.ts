@@ -11,7 +11,7 @@ import {
 } from 'class-validator';
 import { PaginationArgs } from '../common/pagination';
 import { PedidoFiltersInput } from './inputs';
-import { CertificadoTipo } from './enums';
+import { CertificadoTipo, TipoEmpresa } from './enums';
 
 // Arguments of paginated queries. They extend PaginationArgs because the
 // global ValidationPipe validates all field arguments against a single class.
@@ -67,4 +67,22 @@ export class UsuariosArgs extends PaginationArgs {
   @IsOptional()
   @IsBoolean()
   incluirInactivos?: boolean;
+}
+
+@ArgsType()
+export class ClientesArgs extends PaginationArgs {
+  @Field(() => ID, { nullable: true })
+  @IsOptional()
+  @IsString()
+  empresaId?: string;
+
+  @Field({ nullable: true, description: 'Parte de la razón social o del NIT' })
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @Field(() => TipoEmpresa, { nullable: true })
+  @IsOptional()
+  @IsEnum(TipoEmpresa)
+  tipo?: TipoEmpresa;
 }
