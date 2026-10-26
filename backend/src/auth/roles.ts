@@ -48,6 +48,9 @@ export const PERMISOS = {
   certificados: {
     leer: [Role.admin, Role.calidad, Role.comercial],
     escribir: [Role.admin, Role.calidad],
+    anular: [Role.admin, Role.calidad],
+    // Who signs every certificado (IG-21)
+    configurarFirmante: [],
   },
 } as const satisfies Record<string, Record<string, readonly Role[]>>;
 

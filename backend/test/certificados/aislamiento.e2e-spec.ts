@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import * as path from 'path';
 import { PrismaService } from '../../src/prisma/prisma.service';
-import { createE2EApp, gql, tokenFor } from '../utils/e2e';
+import { configurarFirmante, createE2EApp, gql, tokenFor } from '../utils/e2e';
 
 const CREATE = `
   mutation($input: CreateCertificadoInput!) {
@@ -56,6 +56,7 @@ describe('Certificados E2E - aislamiento por empresa', () => {
   beforeAll(async () => {
     process.env.CERTIFICADOS_DIR = pdfDir;
     ({ app, prisma } = await createE2EApp());
+    await configurarFirmante(prisma);
 
     const [a, b] = await Promise.all(
       ['A', 'B'].map((x) =>

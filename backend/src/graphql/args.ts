@@ -2,6 +2,8 @@ import { ArgsType, Field, ID } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import {
   IsBoolean,
+  IsDateString,
+  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -9,6 +11,7 @@ import {
 } from 'class-validator';
 import { PaginationArgs } from '../common/pagination';
 import { PedidoFiltersInput } from './inputs';
+import { CertificadoTipo } from './enums';
 
 // Arguments of paginated queries. They extend PaginationArgs because the
 // global ValidationPipe validates all field arguments against a single class.
@@ -36,6 +39,26 @@ export class CertificadosArgs extends PaginationArgs {
   @IsOptional()
   @IsString()
   empresaId?: string;
+
+  @Field(() => CertificadoTipo, { nullable: true })
+  @IsOptional()
+  @IsEnum(CertificadoTipo)
+  tipo?: CertificadoTipo;
+
+  @Field({ nullable: true, description: 'Cliente, NIT o lote' })
+  @IsOptional()
+  @IsString()
+  busqueda?: string;
+
+  @Field({ nullable: true, description: 'Fecha de emisión desde (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsDateString()
+  fechaDesde?: string;
+
+  @Field({ nullable: true, description: 'Fecha de emisión hasta (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsDateString()
+  fechaHasta?: string;
 }
 
 @ArgsType()

@@ -20,23 +20,26 @@ enum Rol {
 
 // deleted_at marca al usuario como desactivado: no puede iniciar sesión.
 model User {
-  id                    String        @id @default(uuid())
+  id                    String                @id @default(uuid())
   nombre                String
-  email                 String        @unique
+  email                 String                @unique
   password              String
-  rol                   Rol           @default(empleado)
+  rol                   Rol                   @default(empleado)
   documento             String?
   telefono              String?
   // Se pide cambiar la contraseña en el próximo ingreso
-  debe_cambiar_password Boolean       @default(false)
+  debe_cambiar_password Boolean               @default(false)
   // Imagen de la firma (rol entrega, para los recibos)
   firma                 Bytes?
   firma_mime            String?
-  created_at            DateTime      @default(now())
+  created_at            DateTime              @default(now())
   deleted_at            DateTime?
   empresas              UserEmpresa[]
-  pedidos               Pedido[]      @relation("PedidosCreados")
+  pedidos               Pedido[]              @relation("PedidosCreados")
   auditoria             AuditLog[]
+  certificadosFirmados  CertificadoAnalisis[] @relation("CertificadoFirmante")
+  certificadosEmitidos  CertificadoAnalisis[] @relation("CertificadoEmisor")
+  certificadosAnulados  CertificadoAnalisis[] @relation("CertificadoAnulador")
 
   @@map("users")
 }
@@ -135,7 +138,7 @@ enum CertificadoTipo {
 }
 
 model CertificadoAnalisis {
-  id                String              @id @default(uuid())
+  id                String               @id @default(uuid())
   // Tenant. Nullable only for legacy rows that could not be backfilled.
   empresa_id        String?
   cliente_id        String?
@@ -143,20 +146,46 @@ model CertificadoAnalisis {
   empresa_cliente   String
   nit_cliente       String?
   lote              String
-  peso_kg           Decimal?            @db.Decimal(10, 2)
-  fecha_emision     DateTime            @default(now())
+  peso_kg           Decimal?             @db.Decimal(10, 2)
+  fecha_emision     DateTime             @default(now())
   fecha_vencimiento DateTime
-  firmado_por       String              @default("ADRIANA RODRIGUEZ URREA")
+  // Name of the firmante when it was issued: later changes do not alter it
+  firmado_por       String
+  firmante_id       String?
+  // User who generated it
+  emitido_por       String?
   archivo_url       String?
-  created_at        DateTime            @default(now())
+  // Anulado: stays in the history (and its PDF), marked as not valid
+  anulado_at        DateTime?
+  anulado_por       String?
+  motivo_anulacion  String?
+  // Anulado certificado this one corrects
+  reemplaza_id      String?              @unique
+  created_at        DateTime             @default(now())
   deleted_at        DateTime?
   parametros        ParametroAnalisis[]
-  empresa           Empresa?            @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
-  cliente           Cliente?            @relation(fields: [cliente_id], references: [id], onDelete: Restrict)
+  empresa           Empresa?             @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
+  cliente           Cliente?             @relation(fields: [cliente_id], references: [id], onDelete: Restrict)
+  firmante          User?                @relation("CertificadoFirmante", fields: [firmante_id], references: [id], onDelete: Restrict)
+  emisor            User?                @relation("CertificadoEmisor", fields: [emitido_por], references: [id], onDelete: Restrict)
+  anulador          User?                @relation("CertificadoAnulador", fields: [anulado_por], references: [id], onDelete: Restrict)
+  reemplaza         CertificadoAnalisis? @relation("Reemplazo", fields: [reemplaza_id], references: [id], onDelete: Restrict)
+  reemplazado_por   CertificadoAnalisis? @relation("Reemplazo")
 
   @@index([empresa_id])
   @@index([cliente_id])
+  @@index([fecha_emision])
   @@map("certificados_analisis")
+}
+
+// System settings editable by the super admin (e.g. the certificado firmante).
+model Configuracion {
+  clave      String    @id
+  valor      String
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
+  @@map("configuracion")
 }
 
 model ParametroAnalisis {

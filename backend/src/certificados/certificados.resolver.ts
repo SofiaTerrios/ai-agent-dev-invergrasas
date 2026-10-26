@@ -6,6 +6,7 @@ import {
   CertificadoAnalisisModel,
   CertificadoConnection,
   CertificadoModel,
+  FirmanteModel,
 } from '../graphql/models';
 import { CertificadosArgs } from '../graphql/args';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -15,11 +16,15 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthUser } from '../auth/request.util';
 import { CertificadoTipoDto } from './dto/create-certificado.dto';
 import { CertificadoTipo } from '../graphql/enums';
+import { FirmanteService } from './firmante.service';
 
 @Resolver()
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class CertificadosResolver {
-  constructor(private readonly certificadosService: CertificadosService) {}
+  constructor(
+    private readonly certificadosService: CertificadosService,
+    private readonly firmanteService: FirmanteService,
+  ) {}
 
   @Mutation(() => CertificadoAnalisisModel)
   @Permiso('certificados', 'escribir')
@@ -42,9 +47,12 @@ export class CertificadosResolver {
   @Permiso('certificados', 'leer')
   async certificados(
     @CurrentUser() user: AuthUser,
-    @Args() { empresaId, ...pagination }: CertificadosArgs,
+    @Args() { first, after, ...filtros }: CertificadosArgs,
   ) {
-    return this.certificadosService.findAllForUser(user, empresaId, pagination);
+    return this.certificadosService.findAllForUser(user, filtros, {
+      first,
+      after,
+    });
   }
 
   @Query(() => CertificadoModel)
@@ -54,5 +62,33 @@ export class CertificadosResolver {
     @CurrentUser() user: AuthUser,
   ) {
     return this.certificadosService.findOneForUser(user, id);
+  }
+
+  @Mutation(() => CertificadoModel)
+  @Permiso('certificados', 'anular')
+  async anularCertificado(
+    @Args('id', { type: () => ID }) id: string,
+    @Args('motivo') motivo: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.certificadosService.anular(user, id, motivo);
+  }
+
+  @Query(() => FirmanteModel, {
+    nullable: true,
+    description: 'Quién firma los certificados de análisis',
+  })
+  @Permiso('certificados', 'leer')
+  async firmanteCertificados() {
+    return this.firmanteService.obtener();
+  }
+
+  @Mutation(() => FirmanteModel)
+  @Permiso('certificados', 'configurarFirmante')
+  async asignarFirmanteCertificados(
+    @Args('userId', { type: () => ID }) userId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.firmanteService.asignar(userId, user);
   }
 }

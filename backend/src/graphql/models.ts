@@ -185,6 +185,12 @@ export class CertificadoAnalisisModel {
 
 @ObjectType()
 export class ParametroAnalisisModel {
+  @Field(() => String, {
+    nullable: true,
+    description: 'Clave del parámetro en CertificadoParametrosInput',
+  })
+  clave?: string | null;
+
   @Field()
   nombre!: string;
 
@@ -236,11 +242,50 @@ export class CertificadoModel {
   })
   archivo_url?: string | null;
 
+  @Field(() => EmpresaModel, { nullable: true })
+  empresa?: EmpresaModel | null;
+
+  @Field()
+  anulado!: boolean;
+
+  @Field(() => Date, { nullable: true })
+  anulado_at?: Date | null;
+
+  @Field(() => String, { nullable: true })
+  anulado_por_nombre?: string | null;
+
+  @Field(() => String, { nullable: true })
+  motivo_anulacion?: string | null;
+
+  @Field(() => ID, {
+    nullable: true,
+    description: 'Certificado anulado que este corrige',
+  })
+  reemplaza_id?: string | null;
+
+  @Field(() => ID, {
+    nullable: true,
+    description: 'Certificado que corrige a este (si fue anulado y reemitido)',
+  })
+  reemplazado_por_id?: string | null;
+
   @Field()
   created_at!: Date;
 
   @Field(() => [ParametroAnalisisModel])
   parametros!: ParametroAnalisisModel[];
+}
+
+@ObjectType()
+export class FirmanteModel {
+  @Field(() => ID)
+  id!: string;
+
+  @Field()
+  nombre!: string;
+
+  @Field()
+  tiene_firma!: boolean;
 }
 
 @ObjectType()

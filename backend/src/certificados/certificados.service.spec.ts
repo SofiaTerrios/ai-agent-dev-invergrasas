@@ -7,6 +7,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CertificadosService } from './certificados.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnalisisPdfService } from '../utils/pdf/analisis-pdf.service';
+import { AuditoriaService } from '../auditoria/auditoria.service';
+import { FirmanteService } from './firmante.service';
 import {
   CertificadoTipoDto,
   CreateCertificadoDto,
@@ -63,14 +65,24 @@ const createPdfMock = () => ({
   generateCertificadoAnalisisPdf: jest.fn(),
 });
 
+const FIRMANTE = {
+  id: 'adriana',
+  nombre: 'Adriana Rodriguez Urrea',
+  firma: Buffer.from('png'),
+};
+
 describe('CertificadosService', () => {
   let service: CertificadosService;
   let prismaMock: ReturnType<typeof createPrismaMock>;
   let pdfMock: ReturnType<typeof createPdfMock>;
+  let firmanteMock: { paraFirmar: jest.Mock };
+  let auditoriaMock: { registrar: jest.Mock };
 
   beforeEach(async () => {
     prismaMock = createPrismaMock();
     pdfMock = createPdfMock();
+    firmanteMock = { paraFirmar: jest.fn().mockResolvedValue(FIRMANTE) };
+    auditoriaMock = { registrar: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -83,6 +95,8 @@ describe('CertificadosService', () => {
           provide: AnalisisPdfService,
           useValue: pdfMock,
         },
+        { provide: FirmanteService, useValue: firmanteMock },
+        { provide: AuditoriaService, useValue: auditoriaMock },
       ],
     }).compile();
 
@@ -93,9 +107,6 @@ describe('CertificadosService', () => {
     const futureDate = new Date();
     futureDate.setDate(futureDate.getDate() + 30);
 
-    prismaMock.certificadoAnalisis.create.mockResolvedValue({
-      id: 'cert-1',
-    });
     pdfMock.generateCertificadoAnalisisPdf.mockResolvedValue(
       '/static/certificados/cert-cert-1.pdf',
     );
@@ -122,15 +133,96 @@ describe('CertificadosService', () => {
       empleado,
     );
 
-    expect(prismaMock.certificadoAnalisis.create).toHaveBeenCalledWith(
+    expect(pdfMock.generateCertificadoAnalisisPdf).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ empresa_id: EMPRESA_A }),
+        certificadoId: response.id,
+        firmado_por: FIRMANTE.nombre,
+        firma_img: FIRMANTE.firma,
       }),
     );
-    expect(prismaMock.parametroAnalisis.createMany).toHaveBeenCalled();
-    expect(pdfMock.generateCertificadoAnalisisPdf).toHaveBeenCalled();
-    expect(response.id).toBe('cert-1');
-    expect(response.archivo_url).toBe('/api/certificados/cert-1/pdf');
+    expect(prismaMock.certificadoAnalisis.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        id: response.id,
+        empresa_id: EMPRESA_A,
+        firmado_por: FIRMANTE.nombre,
+        firmante_id: FIRMANTE.id,
+        emitido_por: empleado.id,
+        parametros: {
+          create: expect.arrayContaining([
+            { nombre: 'Punto de Nube (°C)', valor: '5,9', orden: 5 },
+          ]) as unknown,
+        },
+      }) as unknown,
+    });
+    expect(response.archivo_url).toBe(`/api/certificados/${response.id}/pdf`);
+  });
+
+  it('no guarda nada si no hay firmante configurada', async () => {
+    firmanteMock.paraFirmar.mockRejectedValue(
+      new BadRequestException('No hay firmante'),
+    );
+
+    await expect(service.createAnalisis(rbdInput(), empleado)).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(pdfMock.generateCertificadoAnalisisPdf).not.toHaveBeenCalled();
+    expect(prismaMock.certificadoAnalisis.create).not.toHaveBeenCalled();
+  });
+
+  it('no guarda el certificado si falla el PDF', async () => {
+    pdfMock.generateCertificadoAnalisisPdf.mockRejectedValue(
+      new Error('Falta el logo'),
+    );
+
+    await expect(service.createAnalisis(rbdInput(), empleado)).rejects.toThrow(
+      'Falta el logo',
+    );
+    expect(prismaMock.certificadoAnalisis.create).not.toHaveBeenCalled();
+  });
+
+  describe('reemitir', () => {
+    const ANULADO = '44444444-4444-4444-4444-444444444444';
+    const anterior = (overrides: Record<string, unknown> = {}) => ({
+      id: ANULADO,
+      empresa_id: EMPRESA_A,
+      anulado_at: new Date(),
+      reemplazado_por: null,
+      parametros: [],
+      ...overrides,
+    });
+
+    it('enlaza el nuevo certificado con el anulado', async () => {
+      prismaMock.certificadoAnalisis.findUnique.mockResolvedValue(anterior());
+
+      await service.createAnalisis(
+        rbdInput({ reemplaza_id: ANULADO }),
+        empleado,
+      );
+
+      expect(prismaMock.certificadoAnalisis.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ reemplaza_id: ANULADO }) as unknown,
+      });
+    });
+
+    it.each([
+      ['no anulado', { anulado_at: null }],
+      ['ya reemitido', { reemplazado_por: { id: 'otro' } }],
+      ['de otra empresa', { empresa_id: EMPRESA_B }],
+    ])('rechaza reemitir un certificado %s', async (_caso, overrides) => {
+      prismaMock.certificadoAnalisis.findUnique.mockResolvedValue(
+        anterior(overrides),
+      );
+      // Access to EMPRESA_B too, so only the reemisión rule can fail
+      prismaMock.userEmpresa.findMany.mockResolvedValue([
+        { empresa_id: EMPRESA_A },
+        { empresa_id: EMPRESA_B },
+      ]);
+
+      await expect(
+        service.createAnalisis(rbdInput({ reemplaza_id: ANULADO }), empleado),
+      ).rejects.toThrow(BadRequestException);
+      expect(prismaMock.certificadoAnalisis.create).not.toHaveBeenCalled();
+    });
   });
 
   it('falla cuando fecha_vencimiento no es futura', async () => {
@@ -245,6 +337,35 @@ describe('CertificadosService', () => {
       expect(prismaMock.certificadoAnalisis.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { empresa_id: { in: [EMPRESA_A] } },
+        }),
+      );
+    });
+
+    it('combines the filters with the empresa restriction', async () => {
+      prismaMock.certificadoAnalisis.findMany.mockResolvedValue([]);
+
+      await service.findAllForUser(empleado, {
+        tipo: 'rbd',
+        busqueda: ' yoko ',
+        fechaDesde: '2026-04-01',
+        fechaHasta: '2026-04-30',
+      });
+
+      expect(prismaMock.certificadoAnalisis.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            empresa_id: { in: [EMPRESA_A] },
+            tipo: 'rbd',
+            fecha_emision: {
+              gte: new Date('2026-04-01'),
+              lt: new Date('2026-05-01'),
+            },
+            OR: [
+              { empresa_cliente: { contains: 'yoko', mode: 'insensitive' } },
+              { nit_cliente: { contains: 'yoko', mode: 'insensitive' } },
+              { lote: { contains: 'yoko', mode: 'insensitive' } },
+            ],
+          },
         }),
       );
     });

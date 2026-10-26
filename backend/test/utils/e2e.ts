@@ -34,7 +34,7 @@ export async function createE2EApp() {
 
 export async function resetDatabase(prisma: PrismaService) {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE TABLE audit_logs, parametros_analisis, certificados_analisis, pedidos, clientes, user_empresas, empresas, users CASCADE',
+    'TRUNCATE TABLE configuracion, audit_logs, parametros_analisis, certificados_analisis, pedidos, clientes, user_empresas, empresas, users CASCADE',
   );
 }
 
@@ -107,3 +107,28 @@ export function createCliente(prisma: PrismaService, empresa_id: string) {
 }
 
 export const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
+
+// 1x1 transparent PNG, valid for pdfkit
+export const PNG_BASE64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+// Creates the user who signs certificados (with a signature image) and sets
+// her as firmante, as the super admin would.
+export async function configurarFirmante(prisma: PrismaService) {
+  const firmante = await prisma.user.create({
+    data: {
+      nombre: 'Adriana Rodriguez Urrea',
+      email: `firmante-${randomUUID()}@e2e.test`,
+      password: 'x',
+      rol: 'calidad',
+      firma: Buffer.from(PNG_BASE64, 'base64'),
+      firma_mime: 'image/png',
+    },
+  });
+  await prisma.configuracion.upsert({
+    where: { clave: 'certificados.firmante_id' },
+    create: { clave: 'certificados.firmante_id', valor: firmante.id },
+    update: { valor: firmante.id },
+  });
+  return firmante;
+}

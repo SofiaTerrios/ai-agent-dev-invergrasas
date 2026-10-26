@@ -440,4 +440,12 @@ export class CreateCertificadoInput {
   @ValidateNested()
   @Type(() => CertificadoParametrosInput)
   parametros!: CertificadoParametrosInput;
+
+  @Field(() => ID, {
+    nullable: true,
+    description: 'Certificado anulado que este corrige',
+  })
+  @IsOptional()
+  @IsUUID()
+  reemplaza_id?: string;
 }

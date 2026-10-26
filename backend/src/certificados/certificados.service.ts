@@ -3,10 +3,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { CertificadoTipo, Prisma } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import { existsSync } from 'fs';
 import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditoriaService } from '../auditoria/auditoria.service';
 import { paginate, PaginationArgs } from '../common/pagination';
 import {
   accessibleEmpresaIds,
@@ -18,11 +20,26 @@ import {
 } from './dto/create-certificado.dto';
 import { AnalisisPdfService } from '../utils/pdf/analisis-pdf.service';
 import { certificadosDir } from '../utils/pdf/certificados-dir';
+import { FirmanteService } from './firmante.service';
 
 type Actor = { id: string; rol?: string };
 
+export type FiltrosCertificados = {
+  empresaId?: string;
+  tipo?: CertificadoTipo;
+  // Matches cliente, NIT or lote
+  busqueda?: string;
+  fechaDesde?: string;
+  fechaHasta?: string;
+};
+
+const MOTIVO_MIN_LENGTH = 5;
+
 const certificadoInclude = {
   parametros: { where: { deleted_at: null }, orderBy: { orden: 'asc' } },
+  empresa: true,
+  anulador: { select: { nombre: true } },
+  reemplazado_por: { select: { id: true } },
 } satisfies Prisma.CertificadoAnalisisInclude;
 
 type CertificadoConParametros = Prisma.CertificadoAnalisisGetPayload<{
@@ -59,10 +76,15 @@ export class CertificadosService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly analisisPdfService: AnalisisPdfService,
+    private readonly firmanteService: FirmanteService,
+    private readonly auditoria: AuditoriaService,
   ) {}
 
   async createAnalisis(dto: CreateCertificadoDto, actor: Actor) {
     await assertEmpresaAccess(this.prisma, actor, dto.empresa_id);
+    if (dto.reemplaza_id) {
+      await this.assertReemplazable(actor, dto.reemplaza_id, dto.empresa_id);
+    }
     if (dto.cliente_id) {
       const cliente = await this.prisma.cliente.findUnique({
         where: { id: dto.cliente_id },
@@ -83,77 +105,127 @@ export class CertificadosService {
     }
 
     const parametros = this.normalizarParametros(dto.tipo, dto.parametros);
+    const firmante = await this.firmanteService.paraFirmar();
+    const id = randomUUID();
     const fechaEmision = new Date();
-    const firmadoPor = 'ADRIANA RODRIGUEZ URREA';
-    const certificado = await this.prisma.certificadoAnalisis.create({
+    const pesoKg =
+      dto.tipo === CertificadoTipoDto.rbd ? (dto.peso_kg ?? null) : null;
+
+    // The PDF is generated first: if it fails, nothing is saved.
+    const archivoUrl =
+      await this.analisisPdfService.generateCertificadoAnalisisPdf({
+        certificadoId: id,
+        tipo: dto.tipo,
+        empresa_cliente: dto.empresa_cliente,
+        nit_cliente: dto.nit_cliente ?? null,
+        lote: dto.lote,
+        peso_kg: pesoKg,
+        fecha_emision: fechaEmision,
+        fecha_vencimiento: fechaVencimiento,
+        firmado_por: firmante.nombre,
+        firma_img: firmante.firma,
+        parametros: parametros.map(({ nombre, valor }) => ({ nombre, valor })),
+      });
+
+    await this.prisma.certificadoAnalisis.create({
       data: {
+        id,
         empresa_id: dto.empresa_id,
         cliente_id: dto.cliente_id ?? null,
         tipo: dto.tipo,
         empresa_cliente: dto.empresa_cliente,
         nit_cliente: dto.nit_cliente ?? null,
         lote: dto.lote,
-        peso_kg:
-          dto.tipo === CertificadoTipoDto.rbd ? (dto.peso_kg ?? null) : null,
+        peso_kg: pesoKg,
         fecha_emision: fechaEmision,
         fecha_vencimiento: fechaVencimiento,
-        firmado_por: firmadoPor,
+        firmado_por: firmante.nombre,
+        firmante_id: firmante.id,
+        emitido_por: actor.id,
+        reemplaza_id: dto.reemplaza_id ?? null,
+        archivo_url: archivoUrl,
+        parametros: { create: parametros },
       },
     });
 
-    await this.prisma.parametroAnalisis.createMany({
-      data: parametros.map((param) => ({
-        certificado_id: certificado.id,
-        nombre: param.nombre,
-        valor: param.valor,
-        orden: param.orden,
-      })),
-    });
-
-    const archivoUrl =
-      await this.analisisPdfService.generateCertificadoAnalisisPdf({
-        certificadoId: certificado.id,
-        tipo: dto.tipo,
-        empresa_cliente: dto.empresa_cliente,
-        nit_cliente: dto.nit_cliente ?? null,
-        lote: dto.lote,
-        peso_kg:
-          dto.tipo === CertificadoTipoDto.rbd ? (dto.peso_kg ?? null) : null,
-        fecha_emision: fechaEmision,
-        fecha_vencimiento: fechaVencimiento,
-        firmado_por: firmadoPor,
-        parametros: parametros.map((param) => ({
-          nombre: param.nombre,
-          valor: param.valor,
-        })),
-      });
-
-    await this.prisma.certificadoAnalisis.update({
-      where: { id: certificado.id },
-      data: { archivo_url: archivoUrl },
-    });
-
     return {
-      id: certificado.id,
-      archivo_url: this.downloadPath(certificado.id),
+      id,
+      archivo_url: this.downloadPath(id),
       fecha_emision: this.formatoFechaISO(fechaEmision),
       mensaje: 'Certificado generado correctamente',
     };
   }
 
+  // Marks it as not valid. The row and its PDF are kept (IG-22).
+  async anular(actor: Actor, id: string, motivo: string) {
+    const certificado = await this.findAccessible(actor, id);
+    if (certificado.anulado_at) {
+      throw new BadRequestException('El certificado ya está anulado');
+    }
+    const motivoLimpio = motivo.trim();
+    if (motivoLimpio.length < MOTIVO_MIN_LENGTH) {
+      throw new BadRequestException(
+        `Indica el motivo de la anulación (mínimo ${MOTIVO_MIN_LENGTH} caracteres)`,
+      );
+    }
+    await this.prisma.$transaction(async (tx) => {
+      await tx.certificadoAnalisis.update({
+        where: { id },
+        data: {
+          anulado_at: new Date(),
+          anulado_por: actor.id,
+          motivo_anulacion: motivoLimpio,
+        },
+      });
+      await this.auditoria.registrar(
+        {
+          actorId: actor.id,
+          accion: 'certificado.anular',
+          entidad: 'certificado',
+          entidadId: id,
+          detalle: { motivo: motivoLimpio },
+        },
+        tx,
+      );
+    });
+    return this.findOneForUser(actor, id);
+  }
+
   async findAllForUser(
     actor: Actor,
-    empresaId?: string,
+    filtros: FiltrosCertificados = {},
     pagination?: PaginationArgs,
   ) {
+    const { empresaId, tipo, fechaDesde, fechaHasta } = filtros;
     if (empresaId) await assertEmpresaAccess(this.prisma, actor, empresaId);
     const empresaIds = await accessibleEmpresaIds(this.prisma, actor);
+    const busqueda = filtros.busqueda?.trim();
 
-    const where: Prisma.CertificadoAnalisisWhereInput = empresaId
-      ? { empresa_id: empresaId }
-      : empresaIds
-        ? { empresa_id: { in: empresaIds } }
-        : {};
+    const where: Prisma.CertificadoAnalisisWhereInput = {
+      ...(empresaId
+        ? { empresa_id: empresaId }
+        : empresaIds
+          ? { empresa_id: { in: empresaIds } }
+          : {}),
+      ...(tipo ? { tipo } : {}),
+      ...(fechaDesde || fechaHasta
+        ? {
+            fecha_emision: {
+              ...(fechaDesde ? { gte: this.inicioDelDia(fechaDesde) } : {}),
+              ...(fechaHasta ? { lt: this.diaSiguiente(fechaHasta) } : {}),
+            },
+          }
+        : {}),
+      ...(busqueda
+        ? {
+            OR: (['empresa_cliente', 'nit_cliente', 'lote'] as const).map(
+              (campo) => ({
+                [campo]: { contains: busqueda, mode: 'insensitive' as const },
+              }),
+            ),
+          }
+        : {}),
+    };
 
     return paginate(
       pagination,
@@ -208,19 +280,64 @@ export class CertificadosService {
     return certificado;
   }
 
+  // An anulado certificado can be corrected once, in the same empresa.
+  private async assertReemplazable(
+    actor: Actor,
+    reemplazaId: string,
+    empresaId: string,
+  ) {
+    const anterior = await this.findAccessible(actor, reemplazaId);
+    if (!anterior.anulado_at) {
+      throw new BadRequestException(
+        'Solo se puede reemitir un certificado anulado',
+      );
+    }
+    if (anterior.reemplazado_por) {
+      throw new BadRequestException('Ese certificado ya fue reemitido');
+    }
+    if (anterior.empresa_id !== empresaId) {
+      throw new BadRequestException(
+        'El certificado reemitido debe ser de la misma empresa',
+      );
+    }
+  }
+
   private serialize(certificado: CertificadoConParametros) {
+    const { anulador, reemplazado_por, ...rest } = certificado;
+    const claves = new Map(
+      [...PARAMETROS_OLEINA, ...PARAMETROS_RBD].map((p) => [p.nombre, p.key]),
+    );
     return {
-      ...certificado,
+      ...rest,
       peso_kg: certificado.peso_kg?.toNumber() ?? null,
       archivo_url: certificado.archivo_url
         ? this.downloadPath(certificado.id)
         : null,
+      anulado: certificado.anulado_at !== null,
+      anulado_por_nombre: anulador?.nombre ?? null,
+      reemplazado_por_id: reemplazado_por?.id ?? null,
       parametros: certificado.parametros.map(({ nombre, valor, orden }) => ({
+        clave: claves.get(nombre) ?? null,
         nombre,
         valor,
         orden,
       })),
     };
+  }
+
+  // Dates come as YYYY-MM-DD (or ISO); the range is in UTC days.
+  private inicioDelDia(fecha: string) {
+    const date = new Date(fecha.slice(0, 10));
+    if (Number.isNaN(date.getTime())) {
+      throw new BadRequestException('Fecha inválida');
+    }
+    return date;
+  }
+
+  private diaSiguiente(fecha: string) {
+    const date = this.inicioDelDia(fecha);
+    date.setUTCDate(date.getUTCDate() + 1);
+    return date;
   }
 
   private downloadPath(id: string) {
