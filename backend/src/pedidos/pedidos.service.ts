@@ -1,5 +1,5 @@
 import {
-  ForbiddenException,
+  BadRequestException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -18,6 +18,8 @@ import { CreatePedidoDto } from './dto/create-pedido.dto';
 import { FilterPedidoDto } from './dto/filter-pedido.dto';
 import { UpdatePedidoDto } from './dto/update-pedido.dto';
 
+type Actor = { id: string; rol?: string };
+
 type PedidoSerializado = Omit<
   Prisma.PedidoGetPayload<{ include: { cliente: true } }>,
   'cantidad_kg'
@@ -27,21 +29,18 @@ type PedidoSerializado = Omit<
 export class PedidosService {
   constructor(private prisma: PrismaService) {}
 
-  async create(data: CreatePedidoDto, creado_por: string) {
+  async create(data: CreatePedidoDto, actor: Actor) {
     const empresa = await this.prisma.empresa.findUnique({
       where: { id: data.empresa_id },
     });
     if (!empresa) throw new NotFoundException('Empresa not found');
-
-    const cliente = await this.prisma.cliente.findUnique({
-      where: { id: data.cliente_id },
-    });
-    if (!cliente) throw new NotFoundException('Cliente not found');
+    await assertEmpresaAccess(this.prisma, actor, data.empresa_id);
+    await this.assertClienteDeEmpresa(data.cliente_id, data.empresa_id);
 
     const pedido = await this.prisma.pedido.create({
       data: {
         ...data,
-        creado_por,
+        creado_por: actor.id,
         fecha: new Date(data.fecha),
       },
       include: { cliente: true },
@@ -52,7 +51,7 @@ export class PedidosService {
   // Pedidos of the empresas the actor can access (admins: all), optionally
   // narrowed to one empresa with filters.empresa_id.
   async listForUser(
-    actor: { id: string; rol?: string },
+    actor: Actor,
     filters: FilterPedidoDto,
     pagination?: PaginationArgs,
   ) {
@@ -97,38 +96,27 @@ export class PedidosService {
     );
   }
 
-  async update(
-    id: string,
-    data: UpdatePedidoDto,
-    actor: { id: string; rol?: string },
-  ) {
+  async update(id: string, data: UpdatePedidoDto, actor: Actor) {
     const existing = await this.prisma.pedido.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Pedido not found');
 
-    if (actor.rol !== 'admin') {
-      const link = await this.prisma.userEmpresa.findUnique({
-        where: {
-          user_id_empresa_id: {
-            user_id: actor.id,
-            empresa_id: existing.empresa_id,
-          },
-        },
-      });
-      if (!link) throw new ForbiddenException('Forbidden');
-    }
+    await assertEmpresaAccess(this.prisma, actor, existing.empresa_id);
 
-    if (data.empresa_id && data.empresa_id !== existing.empresa_id) {
+    const empresaId = data.empresa_id ?? existing.empresa_id;
+    if (empresaId !== existing.empresa_id) {
       const empresa = await this.prisma.empresa.findUnique({
-        where: { id: data.empresa_id },
+        where: { id: empresaId },
       });
       if (!empresa) throw new NotFoundException('Empresa not found');
+      await assertEmpresaAccess(this.prisma, actor, empresaId);
     }
 
-    if (data.cliente_id && data.cliente_id !== existing.cliente_id) {
-      const cliente = await this.prisma.cliente.findUnique({
-        where: { id: data.cliente_id },
-      });
-      if (!cliente) throw new NotFoundException('Cliente not found');
+    const clienteId = data.cliente_id ?? existing.cliente_id;
+    if (
+      clienteId !== existing.cliente_id ||
+      empresaId !== existing.empresa_id
+    ) {
+      await this.assertClienteDeEmpresa(clienteId, empresaId);
     }
 
     const payload = {
@@ -141,6 +129,16 @@ export class PedidosService {
       include: { cliente: true },
     });
     return this.serializePedido(updated);
+  }
+
+  private async assertClienteDeEmpresa(clienteId: string, empresaId: string) {
+    const cliente = await this.prisma.cliente.findUnique({
+      where: { id: clienteId },
+    });
+    if (!cliente) throw new NotFoundException('Cliente not found');
+    if (cliente.empresa_id !== empresaId) {
+      throw new BadRequestException('El cliente no pertenece a la empresa');
+    }
   }
 
   private serializePedido<T extends { cantidad_kg: Prisma.Decimal }>(

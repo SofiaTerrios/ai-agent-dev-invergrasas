@@ -30,3 +30,7 @@ Users need to view the list of orders (Pedidos) associated with their companies.
 - `backend/src/pedidos/pedidos.service.ts`
 - `backend/src/pedidos/pedidos.service.spec.ts`
 - `backend/test/pedidos/list.e2e-spec.ts`
+
+## Estado actual (2026-10-20)
+
+- Paginado y con filtro `empresa_id` (IG-6, IG-10). UI en `/dashboard/pedidos` (IG-10).

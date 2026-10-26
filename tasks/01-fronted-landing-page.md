@@ -17,3 +17,7 @@ TIPOGRAFÍA: Playfair Display (headings) + DM Sans (body) de Google Fonts.
 FOOTER: Logo, links, contacto. Fondo #1B4D1E texto blanco.
 
 Todas las animaciones de scroll via Intersection Observer con clase .visible. Código en un solo archivo HTML.
+
+## Estado actual (2026-10-20)
+
+- Landing pública en `frontend/src/app/page.tsx`.

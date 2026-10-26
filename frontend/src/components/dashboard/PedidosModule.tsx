@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import OrdersTable from "./OrdersTable";
+import PedidoFormModal from "./modals/PedidoFormModal";
 import Button from "@/components/ui/Button";
 import { fetchAllNodes } from "@/lib/graphql";
 import { GET_EMPRESAS_QUERY, type Empresa } from "@/graphql/empresas";
 import { getSession } from "@/lib/session";
 import { getEmpresaActiva, setEmpresaActiva } from "@/lib/empresaActiva";
+import { puedeEditarPedidos, type Pedido } from "@/graphql/pedidos";
 
 type EmpresasState =
   | { status: "loading" }
@@ -20,6 +22,10 @@ export default function PedidosModule() {
     typeof window === "undefined" ? null : getSession(),
   );
   const token = session?.token;
+  const puedeEditar = puedeEditarPedidos(session?.user.rol);
+  // undefined: closed, null: creating, Pedido: editing
+  const [formPedido, setFormPedido] = useState<Pedido | null | undefined>();
+  const [ordersReloadKey, setOrdersReloadKey] = useState(0);
   const [reloadCount, setReloadCount] = useState(0);
   const [empresasState, setEmpresasState] = useState<EmpresasState>({ status: "loading" });
   const [selected, setSelected] = useState<string | null>(() =>
@@ -74,22 +80,29 @@ export default function PedidosModule() {
           </p>
         </div>
 
-        {empresas.length > 0 && (
-          <label className="flex flex-col gap-1.5 text-sm font-medium text-[#2F473D] md:min-w-72">
-            Empresa
-            <select
-              value={empresaActiva?.id ?? ""}
-              onChange={(event) => onSelectEmpresa(event.target.value)}
-              className="rounded-lg border border-[#D5E1DB] bg-white px-3 py-2.5 text-sm text-[#17251F] outline-none focus-visible:ring-2 focus-visible:ring-[#0F6E2E]"
-            >
-              {empresas.map((empresa) => (
-                <option key={empresa.id} value={empresa.id}>
-                  {empresa.razon_social}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+        <div className="flex flex-col gap-3 md:flex-row md:items-end">
+          {empresas.length > 0 && (
+            <label className="flex flex-col gap-1.5 text-sm font-medium text-[#2F473D] md:min-w-72">
+              Empresa
+              <select
+                value={empresaActiva?.id ?? ""}
+                onChange={(event) => onSelectEmpresa(event.target.value)}
+                className="rounded-lg border border-[#D5E1DB] bg-white px-3 py-2.5 text-sm text-[#17251F] outline-none focus-visible:ring-2 focus-visible:ring-[#0F6E2E]"
+              >
+                {empresas.map((empresa) => (
+                  <option key={empresa.id} value={empresa.id}>
+                    {empresa.razon_social}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {empresaActiva && puedeEditar && (
+            <Button onClick={() => setFormPedido(null)} className="w-auto px-6">
+              + Nuevo pedido
+            </Button>
+          )}
+        </div>
       </div>
 
       {empresasState.status === "loading" && (
@@ -129,6 +142,22 @@ export default function PedidosModule() {
           empresaId={empresaActiva.id}
           title={`Pedidos de ${empresaActiva.razon_social}`}
           description="Filtra por cliente, producto o rango de fechas."
+          reloadKey={ordersReloadKey}
+          onEdit={puedeEditar ? setFormPedido : undefined}
+        />
+      )}
+
+      {empresaActiva && (
+        <PedidoFormModal
+          isOpen={formPedido !== undefined}
+          empresaId={empresaActiva.id}
+          pedido={formPedido ?? undefined}
+          token={token}
+          onClose={() => setFormPedido(undefined)}
+          onSaved={() => {
+            setFormPedido(undefined);
+            setOrdersReloadKey((n) => n + 1);
+          }}
         />
       )}
     </div>

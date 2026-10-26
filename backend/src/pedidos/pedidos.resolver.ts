@@ -31,7 +31,7 @@ export class PedidosResolver {
     @Args('input') input: CreatePedidoInput,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.pedidosService.create(input, user.id);
+    return this.pedidosService.create(input, user);
   }
 
   @Mutation(() => PedidoModel)

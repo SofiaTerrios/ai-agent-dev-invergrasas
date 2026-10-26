@@ -2,7 +2,7 @@
 
 **Domain:** `[FRONTEND]`
 **Assigned Agent:** Frontend Agent
-**Status:** `pending`
+**Status:** `done`
 **Created:** 2026-05-07
 **Depends On:** `task-backend-certificados.md`
 
@@ -185,13 +185,17 @@ interface ErrorResponse {
 
 ## Acceptance Criteria
 
-- [ ] Paso 1 muestra claramente las dos opciones y solo avanza al seleccionar una
-- [ ] Paso 4 muestra `Punto de Nube` solo si el tipo es Oleína
-- [ ] Paso 3 muestra `Peso (kg)` solo si el tipo es RBD
-- [ ] Todos los campos requeridos tienen validación en el cliente antes de enviar
-- [ ] La fecha de vencimiento no puede ser pasada
-- [ ] Al generar exitosamente, el PDF se puede descargar sin recargar la página
-- [ ] Si el API retorna error, se muestra el mensaje al usuario de forma legible
-- [ ] El estado de carga bloquea el botón de generar para evitar doble submit
-- [ ] Si el usuario cambia el tipo de certificado, los parámetros del paso 4 se limpian
-- [ ] El formulario es usable en pantallas de escritorio (mínimo 1280px) — es sistema interno
+- [x] Paso 1 muestra claramente las dos opciones y solo avanza al seleccionar una
+- [x] Paso 4 muestra `Punto de Nube` solo si el tipo es Oleína
+- [x] Paso 3 muestra `Peso (kg)` solo si el tipo es RBD
+- [x] Todos los campos requeridos tienen validación en el cliente antes de enviar
+- [x] La fecha de vencimiento no puede ser pasada
+- [x] Al generar exitosamente, el PDF se puede descargar sin recargar la página
+- [x] Si el API retorna error, se muestra el mensaje al usuario de forma legible
+- [x] El estado de carga bloquea el botón de generar para evitar doble submit
+- [x] Si el usuario cambia el tipo de certificado, los parámetros del paso 4 se limpian
+- [x] El formulario es usable en pantallas de escritorio (mínimo 1280px) — es sistema interno
+
+## Estado actual (2026-10-20)
+
+- El paso 2 pide la empresa emisora y, opcionalmente, un cliente registrado (IG-5). El PDF se descarga con token.

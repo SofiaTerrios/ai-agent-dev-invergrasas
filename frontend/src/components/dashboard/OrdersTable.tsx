@@ -21,19 +21,9 @@ import {
 } from "@/lib/graphql";
 import { GET_CLIENTES_BY_EMPRESA_QUERY, type Cliente } from "@/graphql/clientes";
 import { getSession } from "@/lib/session";
+import { PRODUCTO_LABELS, type Pedido } from "@/graphql/pedidos";
 
-type OrderItem = {
-  id: string;
-  empresa_id: string;
-  cliente_id: string;
-  producto: "RBD" | "Oleina";
-  tipo_empaque: "Granel" | "Caneca" | "Balde";
-  cantidad_kg: number;
-  fecha: string;
-  cliente?: {
-    nombre?: string;
-  } | null;
-};
+type OrderItem = Pedido;
 
 type OrdersResult = {
   key: string;
@@ -91,12 +81,18 @@ type OrdersTableProps = {
   empresaId?: string;
   title?: string;
   description?: string;
+  // Changing it reloads the list (e.g. after creating or editing a pedido)
+  reloadKey?: number;
+  // Shows an "Editar" action per row
+  onEdit?: (pedido: Pedido) => void;
 };
 
 export default function OrdersTable({
   empresaId,
   title = "Pedidos recientes",
   description = "Estado de la operación diaria por cliente y producto.",
+  reloadKey = 0,
+  onEdit,
 }: OrdersTableProps) {
   const [filters, setFilters] = useState<OrdersFilters>(INITIAL_FILTERS);
   const [reloadCount, setReloadCount] = useState(0);
@@ -124,7 +120,7 @@ export default function OrdersTable({
     }),
     [empresaId, filters.fecha_inicio, filters.fecha_fin, filters.cliente_id, filters.producto],
   );
-  const queryKey = JSON.stringify({ apiFilters, reloadCount });
+  const queryKey = JSON.stringify({ apiFilters, reloadCount, reloadKey });
   const loading = result?.key !== queryKey;
   const orders = loading ? [] : result.orders;
 
@@ -254,12 +250,17 @@ export default function OrdersTable({
               <TableHeaderCell scope="col" className="text-right">
                 Total (kg)
               </TableHeaderCell>
+              {onEdit && (
+                <TableHeaderCell scope="col" className="text-right">
+                  Acciones
+                </TableHeaderCell>
+              )}
             </TableRow>
           </TableHead>
           <TableBody>
             {orders.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-[#486358]">
+                <TableCell colSpan={onEdit ? 6 : 5} className="text-center text-[#486358]">
                   No hay pedidos para los filtros seleccionados.
                 </TableCell>
               </TableRow>
@@ -268,11 +269,23 @@ export default function OrdersTable({
                 <TableRow key={order.id}>
                   <TableCell>{formatDate(order.fecha)}</TableCell>
                   <TableCell>{order.cliente?.nombre ?? order.cliente_id}</TableCell>
-                  <TableCell>{order.producto}</TableCell>
+                  <TableCell>{PRODUCTO_LABELS[order.producto] ?? order.producto}</TableCell>
                   <TableCell>{order.tipo_empaque}</TableCell>
                   <TableCell className="text-right">
                     {Number(order.cantidad_kg).toLocaleString("es-CO")}
                   </TableCell>
+                  {onEdit && (
+                    <TableCell className="text-right">
+                      <button
+                        type="button"
+                        onClick={() => onEdit(order)}
+                        aria-label={`Editar pedido del ${formatDate(order.fecha)} de ${order.cliente?.nombre ?? "cliente"}`}
+                        className="rounded-md px-3 py-1.5 text-sm font-semibold text-[#0F6E2E] hover:bg-[#F2FAF4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0F6E2E]"
+                      >
+                        Editar
+                      </button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}
