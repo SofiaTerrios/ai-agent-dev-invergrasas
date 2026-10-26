@@ -1,15 +1,17 @@
 import { ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { puede } from '../auth/roles';
 
 type Actor = { id: string; rol?: string };
 
-// Admins can act on any empresa; everyone else only on the ones they are linked to.
+// Roles with `empresas.accesoTotal` act on any empresa; everyone else only on
+// the ones they are linked to.
 export async function assertEmpresaAccess(
   prisma: PrismaService,
   actor: Actor,
   empresaId: string,
 ) {
-  if (actor.rol === 'admin') return;
+  if (puede(actor.rol, 'empresas', 'accesoTotal')) return;
   const link = await prisma.userEmpresa.findUnique({
     where: {
       user_id_empresa_id: { user_id: actor.id, empresa_id: empresaId },
@@ -18,12 +20,12 @@ export async function assertEmpresaAccess(
   if (!link) throw new ForbiddenException('Forbidden');
 }
 
-// Empresa ids the actor can read, or null when there is no restriction (admin).
+// Empresa ids the actor can read, or null when there is no restriction.
 export async function accessibleEmpresaIds(
   prisma: PrismaService,
   actor: Actor,
 ): Promise<string[] | null> {
-  if (actor.rol === 'admin') return null;
+  if (puede(actor.rol, 'empresas', 'accesoTotal')) return null;
   const links = await prisma.userEmpresa.findMany({
     where: { user_id: actor.id, empresa: { deleted_at: null } },
   });

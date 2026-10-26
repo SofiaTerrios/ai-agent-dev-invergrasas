@@ -8,26 +8,55 @@ datasource db {
 }
 
 // Rol global del usuario. El acceso por empresa se controla con UserEmpresa.
-// Permisos por módulo: src/auth/roles.ts
+// Permisos por módulo y acción: src/auth/roles.ts
 enum Rol {
+  super_admin
   admin
   comercial
   calidad
+  entrega
   empleado
 }
 
+// deleted_at marca al usuario como desactivado: no puede iniciar sesión.
 model User {
-  id         String        @id @default(uuid())
-  nombre     String
-  email      String        @unique
-  password   String
-  rol        Rol           @default(empleado)
-  created_at DateTime      @default(now())
-  deleted_at DateTime?
-  empresas   UserEmpresa[]
-  pedidos    Pedido[]      @relation("PedidosCreados")
+  id                    String        @id @default(uuid())
+  nombre                String
+  email                 String        @unique
+  password              String
+  rol                   Rol           @default(empleado)
+  documento             String?
+  telefono              String?
+  // Se pide cambiar la contraseña en el próximo ingreso
+  debe_cambiar_password Boolean       @default(false)
+  // Imagen de la firma (rol entrega, para los recibos)
+  firma                 Bytes?
+  firma_mime            String?
+  created_at            DateTime      @default(now())
+  deleted_at            DateTime?
+  empresas              UserEmpresa[]
+  pedidos               Pedido[]      @relation("PedidosCreados")
+  auditoria             AuditLog[]
 
   @@map("users")
+}
+
+// Acciones sensibles (cambios de rol, alta/baja de usuarios, anulaciones).
+model AuditLog {
+  id         String    @id @default(uuid())
+  // Null cuando la acción la hace un comando (p. ej. crear el primer super admin)
+  actor_id   String?
+  accion     String
+  entidad    String
+  entidad_id String?
+  detalle    Json?
+  created_at DateTime  @default(now())
+  deleted_at DateTime?
+  actor      User?     @relation(fields: [actor_id], references: [id], onDelete: Restrict)
+
+  @@index([actor_id])
+  @@index([entidad, entidad_id])
+  @@map("audit_logs")
 }
 
 model Empresa {

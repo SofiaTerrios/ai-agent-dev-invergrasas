@@ -1,8 +1,8 @@
 import {
+  BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
-  NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { User } from '@prisma/client';
 import { Role } from '../graphql/enums';
@@ -14,19 +14,9 @@ import { signAccessToken } from './jwt';
 export class AuthService {
   constructor(private prisma: PrismaService) {}
 
-  async register(
-    nombre: string,
-    email: string,
-    password: string,
-    rol: Role = Role.empleado,
-    actor?: { rol?: string },
-  ) {
-    // Self-registration only creates empleados; other roles need an admin
-    if (rol !== Role.empleado && actor?.rol !== Role.admin) {
-      throw new ForbiddenException(
-        'Solo un administrador puede asignar ese rol',
-      );
-    }
+  // Public self-registration: always an empleado without empresas. Other
+  // roles and empresa links are given by a super admin (usuarios module).
+  async register(nombre: string, email: string, password: string) {
     // email is unique at DB level, so soft-deleted users still hold it
     const existing = await this.prisma.user.findUnique({
       where: { email, deleted_at: undefined },
@@ -34,33 +24,19 @@ export class AuthService {
     if (existing) throw new ConflictException('Email already registered');
     const hashed = await hashPassword(password);
     const saved = await this.prisma.user.create({
-      data: { nombre, email, password: hashed, rol },
+      data: { nombre, email, password: hashed, rol: Role.empleado },
     });
     return {
       id: saved.id,
       nombre: saved.nombre,
       email: saved.email,
       rol: saved.rol,
+      debe_cambiar_password: saved.debe_cambiar_password,
       created_at: saved.created_at,
     };
   }
 
-  async updateRol(userId: string, rol: Role) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found');
-    const saved = await this.prisma.user.update({
-      where: { id: userId },
-      data: { rol },
-    });
-    return {
-      id: saved.id,
-      nombre: saved.nombre,
-      email: saved.email,
-      rol: saved.rol,
-      created_at: saved.created_at,
-    };
-  }
-
+  // Deactivated users are soft-deleted, so they are not found here.
   async validateUser(email: string, password: string) {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) return null;
@@ -70,7 +46,33 @@ export class AuthService {
     return rest;
   }
 
-  login(user: Pick<User, 'id' | 'email' | 'nombre' | 'rol'>) {
+  async changePassword(userId: string, actual: string, nueva: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException('Usuario inactivo');
+    if (!(await comparePasswords(actual, user.password))) {
+      throw new BadRequestException('La contraseña actual no es correcta');
+    }
+    if (actual === nueva) {
+      throw new BadRequestException(
+        'La nueva contraseña debe ser distinta de la actual',
+      );
+    }
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        password: await hashPassword(nueva),
+        debe_cambiar_password: false,
+      },
+    });
+    return { message: 'Contraseña actualizada' };
+  }
+
+  login(
+    user: Pick<
+      User,
+      'id' | 'email' | 'nombre' | 'rol' | 'debe_cambiar_password'
+    >,
+  ) {
     const payload = {
       sub: user.id,
       email: user.email,
@@ -85,6 +87,7 @@ export class AuthService {
         nombre: user.nombre,
         email: user.email,
         rol: user.rol,
+        debe_cambiar_password: user.debe_cambiar_password,
       },
     };
   }

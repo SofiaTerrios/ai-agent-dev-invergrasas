@@ -1,6 +1,7 @@
 import { ArgsType, Field, ID } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -35,4 +36,12 @@ export class CertificadosArgs extends PaginationArgs {
   @IsOptional()
   @IsString()
   empresaId?: string;
+}
+
+@ArgsType()
+export class UsuariosArgs extends PaginationArgs {
+  @Field({ nullable: true, description: 'Incluir usuarios desactivados' })
+  @IsOptional()
+  @IsBoolean()
+  incluirInactivos?: boolean;
 }

@@ -1,12 +1,4 @@
-import {
-  IsEmail,
-  IsNotEmpty,
-  IsString,
-  MinLength,
-  IsEnum,
-  IsOptional,
-} from 'class-validator';
-import { Role } from '../../graphql/enums';
+import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
 
 export class RegisterUserDto {
   @IsNotEmpty()
@@ -21,8 +13,4 @@ export class RegisterUserDto {
   @IsString()
   @MinLength(6)
   password!: string;
-
-  @IsOptional()
-  @IsEnum(Role)
-  rol?: Role = Role.empleado;
 }

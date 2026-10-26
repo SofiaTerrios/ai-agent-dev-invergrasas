@@ -10,10 +10,9 @@ import { PaginationArgs } from '../common/pagination';
 import { CreateEmpresaInput, UpdateEmpresaInput } from '../graphql/inputs';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { Permiso } from '../auth/decorators/permiso.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthUser } from '../auth/request.util';
-import { PERMISOS } from '../auth/roles';
 
 @Resolver(() => EmpresaModel)
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -21,7 +20,7 @@ export class EmpresasResolver {
   constructor(private readonly empresasService: EmpresasService) {}
 
   @Query(() => EmpresaConnection)
-  @Roles(...PERMISOS.empresas.leer)
+  @Permiso('empresas', 'leer')
   async empresas(
     @Args() pagination: PaginationArgs,
     @CurrentUser() user: AuthUser,
@@ -31,13 +30,13 @@ export class EmpresasResolver {
   }
 
   @Mutation(() => EmpresaModel)
-  @Roles(...PERMISOS.empresas.escribir)
+  @Permiso('empresas', 'crear')
   async createEmpresa(@Args('input') input: CreateEmpresaInput) {
     return this.empresasService.create(input);
   }
 
   @Mutation(() => EmpresaModel)
-  @Roles(...PERMISOS.empresas.escribir)
+  @Permiso('empresas', 'editar')
   async updateEmpresa(
     @Args('id', { type: () => ID }) id: string,
     @Args('input') input: UpdateEmpresaInput,
@@ -46,7 +45,7 @@ export class EmpresasResolver {
   }
 
   @Mutation(() => MessagePayload)
-  @Roles(...PERMISOS.empresas.escribir)
+  @Permiso('usuarios', 'gestionar')
   async associateUserToEmpresa(
     @Args('empresaId', { type: () => ID }) empresaId: string,
     @Args('userId', { type: () => ID }) userId: string,

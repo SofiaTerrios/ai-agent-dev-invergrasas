@@ -10,7 +10,7 @@ describe('Empresas E2E - create', () => {
 
   beforeAll(async () => {
     ({ app, prisma } = await createE2EApp());
-    ({ token } = await createUser(prisma, 'admin'));
+    ({ token } = await createUser(prisma, 'super_admin'));
   });
 
   afterAll(async () => {

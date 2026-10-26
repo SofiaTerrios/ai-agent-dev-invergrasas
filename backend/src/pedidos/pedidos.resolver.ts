@@ -6,10 +6,9 @@ import { PedidosArgs } from '../graphql/args';
 import { CreatePedidoInput, UpdatePedidoInput } from '../graphql/inputs';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { Permiso } from '../auth/decorators/permiso.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthUser } from '../auth/request.util';
-import { PERMISOS } from '../auth/roles';
 
 @Resolver(() => PedidoModel)
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -17,7 +16,7 @@ export class PedidosResolver {
   constructor(private readonly pedidosService: PedidosService) {}
 
   @Query(() => PedidoConnection)
-  @Roles(...PERMISOS.pedidos.leer)
+  @Permiso('pedidos', 'leer')
   async pedidos(
     @Args() { filters = {}, ...pagination }: PedidosArgs,
     @CurrentUser() user: AuthUser,
@@ -26,7 +25,7 @@ export class PedidosResolver {
   }
 
   @Mutation(() => PedidoModel)
-  @Roles(...PERMISOS.pedidos.escribir)
+  @Permiso('pedidos', 'escribir')
   async createPedido(
     @Args('input') input: CreatePedidoInput,
     @CurrentUser() user: AuthUser,
@@ -35,7 +34,7 @@ export class PedidosResolver {
   }
 
   @Mutation(() => PedidoModel)
-  @Roles(...PERMISOS.pedidos.escribir)
+  @Permiso('pedidos', 'escribir')
   async updatePedido(
     @Args('id', { type: () => ID }) id: string,
     @Args('input') input: UpdatePedidoInput,

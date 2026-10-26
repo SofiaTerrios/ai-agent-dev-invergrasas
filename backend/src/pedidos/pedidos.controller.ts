@@ -1,10 +1,9 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { Permiso } from '../auth/decorators/permiso.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthUser } from '../auth/request.util';
-import { PERMISOS } from '../auth/roles';
 import { FilterPedidoDto } from './dto/filter-pedido.dto';
 import { PedidosService } from './pedidos.service';
 
@@ -14,7 +13,7 @@ export class PedidosController {
   constructor(private readonly pedidosService: PedidosService) {}
 
   @Get()
-  @Roles(...PERMISOS.pedidos.leer)
+  @Permiso('pedidos', 'leer')
   async findAll(
     @CurrentUser() user: AuthUser,
     @Query() filters: FilterPedidoDto,

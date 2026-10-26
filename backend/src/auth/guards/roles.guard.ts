@@ -6,8 +6,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Role } from '../../graphql/enums';
-import { ROLES_KEY } from '../decorators/roles.decorator';
+import { PERMISO_KEY, PermisoRequerido } from '../decorators/permiso.decorator';
+import { Accion, puede } from '../roles';
 import { getRequest } from '../request.util';
 
 // Works for REST and GraphQL. Must run after JwtAuthGuard, which sets request.user.
@@ -16,15 +16,15 @@ export class RolesGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const roles = this.reflector.getAllAndOverride<Role[] | undefined>(
-      ROLES_KEY,
-      [context.getHandler(), context.getClass()],
-    );
-    if (!roles || roles.length === 0) return true;
+    const permiso = this.reflector.getAllAndOverride<
+      PermisoRequerido | undefined
+    >(PERMISO_KEY, [context.getHandler(), context.getClass()]);
+    if (!permiso) return true;
 
     const user = getRequest(context).user;
     if (!user) throw new UnauthorizedException('Missing or invalid token');
-    if (!roles.includes(user.rol as Role)) {
+    const accion = permiso.accion as Accion<typeof permiso.modulo>;
+    if (!puede(user.rol, permiso.modulo, accion)) {
       throw new ForbiddenException('No tienes permisos para esta acción');
     }
     return true;

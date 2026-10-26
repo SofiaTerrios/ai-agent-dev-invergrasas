@@ -1,10 +1,13 @@
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { jwtSecret } from './auth/jwt';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // Room for signature images (up to 300 KB, sent as base64)
+  app.useBodyParser('json', { limit: '1mb' });
   // Fail fast instead of signing tokens with the development secret
   jwtSecret();
 

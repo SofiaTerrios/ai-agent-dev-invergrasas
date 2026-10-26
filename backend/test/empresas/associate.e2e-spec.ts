@@ -13,7 +13,7 @@ describe('Empresas E2E - associate user', () => {
 
   beforeAll(async () => {
     ({ app, prisma } = await createE2EApp());
-    ({ token } = await createUser(prisma, 'admin'));
+    ({ token } = await createUser(prisma, 'super_admin'));
     const empleado = await createUser(prisma, 'empleado');
     userId = empleado.user.id;
     userToken = empleado.token;
