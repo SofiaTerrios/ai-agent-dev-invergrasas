@@ -34,7 +34,8 @@ backend/   NestJS: API GraphQL en /graphql y REST en /api/*
 - `AuditLog`: quién hizo qué acción sensible y sobre qué entidad.
 - `Empresa` 1–N `Cliente`, `Pedido` y `CertificadoAnalisis`.
 - `Pedido`: cliente, producto (`RBD` | `Oleina`), empaque (`Granel` | `Caneca` | `Balde`), `cantidad_kg` y fecha.
-- `CertificadoAnalisis` 1–N `ParametroAnalisis` (acidez, humedad, índice de yodo, etc.).
+- `CertificadoAnalisis` 1–N `ParametroAnalisis` (acidez, humedad, índice de yodo, etc.). Guarda quién lo firmó (`firmante_id`, `firmado_por`) y quién lo emitió. Un certificado anulado conserva su PDF y puede tener uno que lo corrige (`reemplaza_id`).
+- `Configuracion`: ajustes clave/valor del sistema (p. ej. `certificados.firmante_id`).
 
 ## Reglas transversales
 
@@ -44,7 +45,7 @@ backend/   NestJS: API GraphQL en /graphql y REST en /api/*
 - **Auditoría:** las acciones sensibles se guardan en `audit_logs` con `AuditoriaService`, dentro de la misma transacción que el cambio.
 - **Borrado lógico:** todos los modelos tienen `deleted_at`. Una extensión de Prisma oculta los registros borrados en las lecturas, y nunca se borran filas de verdad.
 - **Paginación:** los listados devuelven `XConnection { edges { cursor node } pageInfo { endCursor hasNextPage } totalCount }`, con `first`/`after`. El máximo por página se configura con `PAGINATION_MAX_LIMIT`.
-- **PDFs:** se guardan en `CERTIFICADOS_DIR` (fuera de git) y se descargan solo con token en `GET /api/certificados/:id/pdf`.
+- **PDFs:** se guardan en `CERTIFICADOS_DIR` (fuera de git) y se descargan solo con token en `GET /api/certificados/:id/pdf`. El logo está en `src/utils/pdf/assets/` y `nest-cli.json` lo copia a `dist/`; la firma sale del usuario firmante. Si falta alguno, no se guarda nada.
 - **Tipado:** `no-explicit-any` es error en backend y frontend.
 
 ## Frontend

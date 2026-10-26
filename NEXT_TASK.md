@@ -2,12 +2,16 @@
 
 Las tareas de `tasks/` (01–16) y las de Jira IG-4 a IG-15 están completas; ver `memory/progress.md`.
 
-**Fase 1 (usuarios y roles: IG-24, IG-25, IG-29) implementada**, en revisión. Pendiente de esa fase:
+**Fase 1 (usuarios y roles)** mergeada. **Fase 2 (certificados: IG-18, IG-19, IG-21, IG-22)** implementada, en revisión.
 
-- Validar la matriz de `docs/PERMISOS.md` con el negocio.
-- Decidir qué pasa con el rol `empleado` y si se mantiene el registro público (hoy crea `empleado` sin empresas, es decir, sin acceso a datos).
+Pendiente con el negocio:
 
-Siguiente fase: certificados (IG-18, IG-19, IG-21, IG-20, IG-22).
+- IG-20: revisar los PDFs de oleína y RBD junto a un Word real con quien firma. Puntos que el código no puede decidir solo: día con o sin cero (`abril 05` / `abril 5`), tamaño del logo, fuente (Times) y bordes de la tabla.
+- IG-21: crear el usuario de Adriana con su firma real y asignarla como firmante (`docs/PERMISOS.md`).
+- IG-22: confirmar que anular + reemitir (en vez de editar) es lo que quiere el negocio.
+- Validar la matriz de `docs/PERMISOS.md` y decidir qué pasa con el rol `empleado` y el registro público.
+
+Siguiente fase: datos maestros (IG-35, IG-36, IG-37, IG-38, IG-26, IG-40). Antes hay que resolver los choques con `Cliente` y `Pedido` (ver el plan).
 
 ## Despliegue
 

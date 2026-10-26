@@ -55,3 +55,10 @@ Formato de cada entrada: fecha, estado, contexto, decisión y consecuencias.
 - **Contexto:** hacía falta un dueño del sistema con acceso total y un rol para los trabajadores de entrega. Los roles los gestionaba el `admin`.
 - **Decisión:** nuevos roles `super_admin` y `entrega`. Los permisos se declaran por módulo y acción (`@Permiso('clientes', 'escribir')`) sobre la matriz `PERMISOS`; `super_admin` pasa siempre y no se lista. Solo el `super_admin` gestiona usuarios, roles y empresas asignadas; el `admin` pierde esa capacidad y la de crear empresas. El primer super admin se crea con `npm run super-admin` y credenciales en variables de entorno.
 - **Consecuencias:** `JwtAuthGuard` consulta el usuario en cada petición (una lectura por id): desactivar o cambiar el rol aplica de inmediato. Los cambios de rol y altas/bajas de usuarios quedan en `audit_logs`. No se puede quedar el sistema sin un `super_admin` activo. `empleado` se mantiene hasta decidir su migración con IG-39. Detalle en `docs/PERMISOS.md`.
+
+### DEC-009: Firmante de certificados como usuario y anulación en vez de edición
+
+- **Fecha:** 2026-10-26 · **Estado:** aceptada (anulación a confirmar con el negocio) · **Jira:** IG-19, IG-21, IG-22
+- **Contexto:** el nombre de la firmante estaba escrito en el código y las imágenes de logo y firma del repo estaban corruptas. Un certificado emitido no se podía corregir.
+- **Decisión:** la firmante es un usuario con imagen de firma, elegido por el super admin (`configuracion.certificados.firmante_id`). Cada certificado guarda `firmante_id` y el nombre en `firmado_por`. El logo sale de `frontend/public/logo.jpg`. Un certificado no se edita: se anula con motivo (queda en el historial con su PDF) y se reemite uno nuevo enlazado con `reemplaza_id`. El PDF se genera antes de guardar el certificado.
+- **Consecuencias:** sin firmante configurada no se generan certificados. Los subíndices (I₂, O₂) se dibujan a mano porque las fuentes estándar del PDF no los tienen.

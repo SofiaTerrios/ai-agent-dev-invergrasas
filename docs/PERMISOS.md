@@ -31,6 +31,8 @@ La matriz vive en `backend/src/auth/roles.ts` (`PERMISOS`) y se aplica con `@Per
 | pedidos · escribir | ✔ | ✔ | ✔ | | | ✔ |
 | certificados · leer | ✔ | ✔ | ✔ | ✔ | | |
 | certificados · escribir | ✔ | ✔ | | ✔ | | |
+| certificados · anular | ✔ | ✔ | | ✔ | | |
+| certificados · configurarFirmante | ✔ | | | | | |
 
 Además de la matriz, los datos de una empresa solo se ven si el usuario está vinculado a ella (`UserEmpresa`), salvo los roles con `empresas · accesoTotal`.
 
@@ -62,6 +64,15 @@ Diferencias con lo implementado y por qué:
 - Los usuarios creados por el super admin (y los de contraseña restablecida) deben cambiarla en el siguiente ingreso.
 - No se puede desactivar ni degradar al último `super_admin` activo, ni desactivarse a uno mismo.
 - Los cambios de rol, altas, bajas y restablecimientos de contraseña quedan en `audit_logs`.
+
+## Firmante de los certificados (IG-21)
+
+Todos los certificados de análisis los firma una sola persona (hoy, Adriana Rodríguez Urrea). Es un usuario del sistema con imagen de firma:
+
+1. En **Usuarios**, crear (o editar) su usuario y subir la imagen de la firma.
+2. En **Certificados**, el super admin pulsa **Asignar** / **Cambiar** en «Firmante de los certificados».
+
+Mientras no haya firmante, no se pueden generar certificados. Cada certificado guarda quién lo firmó (`firmante_id` y el nombre en `firmado_por`), así que cambiar la firmante o sus datos no altera los ya emitidos.
 
 ## Primer Super Administrador
 
