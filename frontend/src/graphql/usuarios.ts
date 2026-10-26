@@ -12,6 +12,10 @@ const USUARIO_FIELDS = `
   debe_cambiar_password
   tiene_firma
   created_at
+  vehiculo_por_defecto {
+    id
+    placa
+  }
   empresas {
     id
     razon_social
@@ -106,6 +110,7 @@ export type Usuario = {
   debe_cambiar_password: boolean;
   tiene_firma: boolean;
   created_at: string;
+  vehiculo_por_defecto: { id: string; placa: string } | null;
   empresas: Pick<Empresa, "id" | "razon_social">[];
 };
 

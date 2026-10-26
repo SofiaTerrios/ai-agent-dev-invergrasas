@@ -34,8 +34,19 @@ const PERMISOS = {
   },
   clientes: {
     leer: TODOS,
-    leerTodos: ["admin"],
     escribir: ["admin", "comercial"],
+  },
+  contactos: {
+    escribir: ["admin", "comercial", "entrega"],
+  },
+  catalogos: {
+    leer: TODOS,
+    gestionarActividades: [],
+    gestionarProductos: ["admin"],
+  },
+  vehiculos: {
+    leer: TODOS,
+    escribir: ["admin"],
   },
   pedidos: {
     leer: TODOS,

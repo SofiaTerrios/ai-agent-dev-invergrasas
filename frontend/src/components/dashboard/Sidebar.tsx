@@ -12,6 +12,7 @@ import {
   Building2,
   Users,
   UserCog,
+  Boxes,
   LogOut,
   X,
 } from "lucide-react";
@@ -62,7 +63,16 @@ const navGroups: NavGroup[] = [
         href: "/dashboard/clientes",
         label: "Clientes",
         icon: Users,
-        visible: (rol) => puede(rol, "clientes", "leerTodos"),
+        visible: (rol) => puede(rol, "clientes", "leer"),
+      },
+      {
+        href: "/dashboard/catalogos",
+        label: "Catálogos",
+        icon: Boxes,
+        visible: (rol) =>
+          puede(rol, "catalogos", "gestionarProductos") ||
+          puede(rol, "catalogos", "gestionarActividades") ||
+          puede(rol, "vehiculos", "escribir"),
       },
       {
         href: "/dashboard/usuarios",

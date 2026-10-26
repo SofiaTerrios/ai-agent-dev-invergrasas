@@ -96,7 +96,7 @@ export default function PedidoFormModal({
   const [isLoading, setIsLoading] = useState(false);
   const [clientesState, setClientesState] = useState<{
     empresaId: string;
-    list: Pick<Cliente, "id" | "nombre">[];
+    list: Pick<Cliente, "id" | "razon_social">[];
   } | null>(null);
   const clientes = clientesState?.empresaId === empresaId ? clientesState.list : null;
   const loadingClientes = isOpen && clientes === null;
@@ -225,7 +225,7 @@ export default function PedidoFormModal({
                 </option>
                 {(clientes ?? []).map((cliente) => (
                   <option key={cliente.id} value={cliente.id}>
-                    {cliente.nombre}
+                    {cliente.razon_social}
                   </option>
                 ))}
               </select>
