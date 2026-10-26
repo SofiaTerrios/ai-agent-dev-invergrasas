@@ -11,8 +11,7 @@ import {
 import { createReadStream } from 'fs';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { PERMISOS } from '../auth/roles';
+import { Permiso } from '../auth/decorators/permiso.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthUser } from '../auth/request.util';
 import { CertificadosService } from './certificados.service';
@@ -24,7 +23,7 @@ export class CertificadosController {
   constructor(private readonly certificadosService: CertificadosService) {}
 
   @Post('analisis')
-  @Roles(...PERMISOS.certificados.escribir)
+  @Permiso('certificados', 'escribir')
   async createAnalisis(
     @Body() dto: CreateCertificadoDto,
     @CurrentUser() user: AuthUser,
@@ -33,7 +32,7 @@ export class CertificadosController {
   }
 
   @Get(':id/pdf')
-  @Roles(...PERMISOS.certificados.leer)
+  @Permiso('certificados', 'leer')
   async downloadPdf(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: AuthUser,

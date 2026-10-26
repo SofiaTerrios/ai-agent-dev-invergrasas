@@ -1,3 +1,5 @@
+import { puede } from "@/lib/permisos";
+
 export type Producto = "RBD" | "Oleina";
 export type TipoEmpaque = "Granel" | "Caneca" | "Balde";
 
@@ -63,8 +65,6 @@ export const UPDATE_PEDIDO_MUTATION = `
 `;
 
 // Roles that can create and edit pedidos (backend: PERMISOS.pedidos.escribir)
-const ROLES_ESCRITURA_PEDIDOS = ["admin", "comercial", "empleado"];
-
 export function puedeEditarPedidos(rol?: string) {
-  return Boolean(rol && ROLES_ESCRITURA_PEDIDOS.includes(rol));
+  return puede(rol, "pedidos", "escribir");
 }

@@ -1,3 +1,5 @@
+import { rolLabel } from "@/lib/permisos";
+
 type HeaderProps = {
   onOpenSidebar: () => void;
   sidebarCollapsed: boolean;
@@ -26,8 +28,7 @@ export default function Header({
   userRole = "usuario",
   notificationCount = 0,
 }: HeaderProps) {
-  const roleLabel =
-    userRole.charAt(0).toUpperCase() + userRole.slice(1);
+  const roleLabel = rolLabel(userRole);
 
   return (
     <header className="sticky top-0 z-30 border-b border-[#DDE8E2] bg-white">

@@ -11,6 +11,8 @@ import { ClientesModule } from './clientes/clientes.module';
 import { PedidosModule } from './pedidos/pedidos.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { CertificadosModule } from './certificados/certificados.module';
+import { AuditoriaModule } from './auditoria/auditoria.module';
+import { UsuariosModule } from './usuarios/usuarios.module';
 
 @Module({
   imports: [
@@ -28,7 +30,9 @@ import { CertificadosModule } from './certificados/certificados.module';
       }),
     }),
     PrismaModule,
+    AuditoriaModule,
     AuthModule,
+    UsuariosModule,
     EmpresasModule,
     ClientesModule,
     PedidosModule,

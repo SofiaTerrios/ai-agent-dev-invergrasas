@@ -1,8 +1,4 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import jwt from 'jsonwebtoken';
 import { AuthService } from './auth.service';
 import { hashPassword } from '../utils/hash';
@@ -47,30 +43,12 @@ describe('AuthService', () => {
       expect(res).not.toHaveProperty('password');
     });
 
-    it('rejects other roles when the caller is not admin', async () => {
-      await expect(
-        service.register('T', 't@example.com', 'secret123', Role.admin),
-      ).rejects.toThrow(ForbiddenException);
-      await expect(
-        service.register('T', 't@example.com', 'secret123', Role.calidad, {
-          rol: Role.comercial,
-        }),
-      ).rejects.toThrow(ForbiddenException);
-      expect(prisma.user.create).not.toHaveBeenCalled();
-    });
+    it('always creates empleados that must not change password', async () => {
+      await service.register('T', 't@example.com', 'secret123');
 
-    it('lets an admin create users with any role', async () => {
-      const res = await service.register(
-        'T',
-        't@example.com',
-        'secret123',
-        Role.calidad,
-        {
-          rol: Role.admin,
-        },
-      );
-
-      expect(res.rol).toBe(Role.calidad);
+      expect(prisma.user.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ rol: Role.empleado }) as unknown,
+      });
     });
 
     it('throws on duplicate email, including soft-deleted users', async () => {
@@ -85,23 +63,37 @@ describe('AuthService', () => {
     });
   });
 
-  describe('updateRol', () => {
-    it('changes the role of an existing user', async () => {
-      prisma.user.findUnique.mockResolvedValue({ id: 'u1' });
+  describe('changePassword', () => {
+    beforeEach(async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'u1',
+        password: await hashPassword('actual123'),
+      });
+    });
 
-      const res = await service.updateRol('u1', Role.comercial);
+    it('saves the new password and clears debe_cambiar_password', async () => {
+      await service.changePassword('u1', 'actual123', 'nueva123');
 
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: 'u1' },
-        data: { rol: Role.comercial },
+        data: {
+          password: expect.any(String) as unknown,
+          debe_cambiar_password: false,
+        },
       });
-      expect(res.rol).toBe(Role.comercial);
     });
 
-    it('throws NotFound for unknown users', async () => {
-      await expect(service.updateRol('nope', Role.admin)).rejects.toThrow(
-        NotFoundException,
-      );
+    it('rejects a wrong current password', async () => {
+      await expect(
+        service.changePassword('u1', 'otra', 'nueva123'),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects reusing the current password', async () => {
+      await expect(
+        service.changePassword('u1', 'actual123', 'actual123'),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -129,8 +121,10 @@ describe('AuthService', () => {
       nombre: 'T',
       email: 't@example.com',
       rol: Role.calidad,
+      debe_cambiar_password: true,
     });
 
+    expect(out.user.debe_cambiar_password).toBe(true);
     const payload = jwt.verify(out.access_token, JWT_SECRET);
     expect(payload).toMatchObject({ sub: 'u1', rol: 'calidad' });
   });

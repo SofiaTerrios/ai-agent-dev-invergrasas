@@ -28,6 +28,9 @@ export class UserModel {
   @Field(() => Role)
   rol!: Role;
 
+  @Field({ description: 'Debe cambiar la contraseña antes de seguir' })
+  debe_cambiar_password!: boolean;
+
   @Field()
   created_at!: Date;
 }
@@ -60,6 +63,43 @@ export class EmpresaModel {
 
   @Field({ nullable: true })
   correo?: string;
+
+  @Field()
+  created_at!: Date;
+}
+
+// User as seen from the user management module (super admin)
+@ObjectType()
+export class UsuarioModel {
+  @Field(() => ID)
+  id!: string;
+
+  @Field()
+  nombre!: string;
+
+  @Field()
+  email!: string;
+
+  @Field(() => Role)
+  rol!: Role;
+
+  @Field(() => String, { nullable: true })
+  documento?: string | null;
+
+  @Field(() => String, { nullable: true })
+  telefono?: string | null;
+
+  @Field({ description: 'false cuando el usuario está desactivado' })
+  activo!: boolean;
+
+  @Field()
+  debe_cambiar_password!: boolean;
+
+  @Field()
+  tiene_firma!: boolean;
+
+  @Field(() => [EmpresaModel])
+  empresas!: EmpresaModel[];
 
   @Field()
   created_at!: Date;
@@ -207,6 +247,12 @@ export class CertificadoModel {
 export class EmpresaConnection extends ConnectionType(
   EmpresaModel,
   'Empresa',
+) {}
+
+@ObjectType()
+export class UsuarioConnection extends ConnectionType(
+  UsuarioModel,
+  'Usuario',
 ) {}
 
 @ObjectType()

@@ -66,7 +66,7 @@ describe('RBAC E2E', () => {
     });
 
     it('allows the roles in the matrix', async () => {
-      const res = await gql(app, tokens.admin, CREATE_EMPRESA, {
+      const res = await gql(app, tokens.super_admin, CREATE_EMPRESA, {
         input: { razon_social: 'Y', nit: 'RBAC-Y' },
       });
       expect(res.errors).toBeUndefined();
@@ -75,6 +75,30 @@ describe('RBAC E2E', () => {
         input: clienteInput('comercial'),
       });
       expect(cliente.errors).toBeUndefined();
+    });
+
+    it('keeps empresa creation for super_admin, not admin', async () => {
+      const res = await gql(app, tokens.admin, CREATE_EMPRESA, {
+        input: { razon_social: 'A', nit: 'RBAC-A' },
+      });
+      expect(res.errors?.[0]?.extensions?.code).toBe('FORBIDDEN');
+    });
+
+    it('gives super_admin every empresa without a UserEmpresa link', async () => {
+      const otra = await prisma.empresa.create({
+        data: { razon_social: 'Sin vínculo', nit: 'RBAC-SV' },
+      });
+      const LIST = `query { empresas(first: 100) { edges { node { id } } } }`;
+      type List = { empresas: { edges: { node: { id: string } }[] } };
+      const ids = (res: { data: List }) =>
+        res.data.empresas.edges.map((edge) => edge.node.id);
+
+      expect(ids(await gql<List>(app, tokens.super_admin, LIST))).toContain(
+        otra.id,
+      );
+      expect(ids(await gql<List>(app, tokens.comercial, LIST))).not.toContain(
+        otra.id,
+      );
     });
 
     it('keeps calidad out of clientes writes', async () => {
@@ -100,7 +124,7 @@ describe('RBAC E2E', () => {
         .expect(403);
       await request(app.getHttpServer())
         .post('/api/empresas')
-        .set('Authorization', `Bearer ${tokens.admin}`)
+        .set('Authorization', `Bearer ${tokens.super_admin}`)
         .send(body)
         .expect(201);
     });
@@ -141,29 +165,31 @@ describe('RBAC E2E', () => {
       expect(res.data.register.rol).toBe('empleado');
     });
 
-    it('does not allow self-registering as admin', async () => {
+    it('does not accept a role on self-registration', async () => {
       const res = await gql(
         app,
         null,
         REGISTER,
         input('hacker@rbac.test', 'admin'),
       );
-      expect(res.errors?.[0]?.extensions?.code).toBe('FORBIDDEN');
+      expect(res.errors?.[0]?.extensions?.code).toBe('BAD_USER_INPUT');
       expect(
         await prisma.user.count({ where: { email: 'hacker@rbac.test' } }),
       ).toBe(0);
     });
 
-    it('lets only admins change roles', async () => {
-      const denied = await gql(app, tokens.comercial, UPDATE_ROL, {
-        userId: ids.empleado,
-        rol: 'admin',
-      });
-      expect(denied.errors?.[0]?.extensions?.code).toBe('FORBIDDEN');
+    it('lets only super_admin change roles', async () => {
+      for (const rol of ['comercial', 'admin'] as const) {
+        const denied = await gql(app, tokens[rol], UPDATE_ROL, {
+          userId: ids.empleado,
+          rol: 'admin',
+        });
+        expect(denied.errors?.[0]?.extensions?.code).toBe('FORBIDDEN');
+      }
 
       const ok = await gql<{ updateUserRol: { rol: string } }>(
         app,
-        tokens.admin,
+        tokens.super_admin,
         UPDATE_ROL,
         {
           userId: ids.empleado,

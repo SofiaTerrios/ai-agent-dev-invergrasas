@@ -14,12 +14,11 @@ import { CreateClienteDto } from './dto/create-cliente.dto';
 import { UpdateClienteDto } from './dto/update-cliente.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { PERMISOS } from '../auth/roles';
+import { Permiso } from '../auth/decorators/permiso.decorator';
 
 @Controller('clientes')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(...PERMISOS.clientes.escribir)
+@Permiso('clientes', 'escribir')
 export class ClientesController {
   constructor(private clientesService: ClientesService) {}
 

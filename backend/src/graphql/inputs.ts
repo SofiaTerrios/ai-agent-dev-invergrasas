@@ -1,6 +1,7 @@
 import { Field, Float, ID, InputType } from '@nestjs/graphql';
 import { CertificadoTipo, Producto, Role, TipoEmpaque } from './enums';
 import {
+  IsArray,
   IsDateString,
   IsEmail,
   IsEnum,
@@ -9,6 +10,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  MaxLength,
   Min,
   MinLength,
   ValidateNested,
@@ -32,11 +34,6 @@ export class RegisterInput {
   @IsString()
   @MinLength(6)
   password!: string;
-
-  @Field(() => Role, { nullable: true })
-  @IsOptional()
-  @IsEnum(Role)
-  rol?: Role;
 }
 
 @InputType()
@@ -50,6 +47,118 @@ export class LoginInput {
   @IsNotEmpty()
   @IsString()
   password!: string;
+}
+
+@InputType()
+export class ChangePasswordInput {
+  @Field()
+  @IsNotEmpty()
+  @IsString()
+  password_actual!: string;
+
+  @Field()
+  @IsNotEmpty()
+  @IsString()
+  @MinLength(6)
+  password_nueva!: string;
+}
+
+// Signature image as a data URL (`data:image/png;base64,...`), at most
+// FIRMA_MAX_BYTES once decoded (checked in usuarios/firma.ts).
+const FIRMA_DESCRIPCION =
+  'Imagen de la firma como data URL (PNG o JPEG, máx. 300 KB)';
+const FIRMA_MAX_LENGTH = 420_000;
+
+@InputType()
+export class CreateUsuarioInput {
+  @Field()
+  @IsNotEmpty()
+  @IsString()
+  nombre!: string;
+
+  @Field()
+  @IsNotEmpty()
+  @IsEmail()
+  email!: string;
+
+  @Field({ description: 'Contraseña inicial: se pide cambiarla al ingresar' })
+  @IsNotEmpty()
+  @IsString()
+  @MinLength(6)
+  password!: string;
+
+  @Field(() => Role)
+  @IsEnum(Role)
+  rol!: Role;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsString()
+  documento?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsString()
+  telefono?: string;
+
+  @Field(() => [ID], { nullable: true })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('all', { each: true })
+  empresa_ids?: string[];
+
+  @Field({ nullable: true, description: FIRMA_DESCRIPCION })
+  @IsOptional()
+  @IsString()
+  @MaxLength(FIRMA_MAX_LENGTH)
+  firma?: string;
+}
+
+@InputType()
+export class UpdateUsuarioInput {
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsNotEmpty()
+  @IsString()
+  nombre?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+
+  @Field(() => Role, { nullable: true })
+  @IsOptional()
+  @IsEnum(Role)
+  rol?: Role;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  documento?: string | null;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  telefono?: string | null;
+
+  @Field(() => [ID], {
+    nullable: true,
+    description: 'Reemplaza las empresas asignadas',
+  })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('all', { each: true })
+  empresa_ids?: string[];
+
+  @Field(() => String, {
+    nullable: true,
+    description: `${FIRMA_DESCRIPCION}. null la quita`,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(FIRMA_MAX_LENGTH)
+  firma?: string | null;
 }
 
 @InputType()

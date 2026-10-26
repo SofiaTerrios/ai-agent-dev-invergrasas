@@ -1,21 +1,27 @@
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ExecutionContextHost } from '@nestjs/core/helpers/execution-context-host';
-import { Role } from '../../graphql/enums';
+import { Permiso } from '../decorators/permiso.decorator';
 import { RolesGuard } from './roles.guard';
 
 class TestController {
   open() {}
-  adminOnly() {}
+
+  @Permiso('empresas', 'editar')
+  editarEmpresa() {}
+
+  @Permiso('usuarios', 'gestionar')
+  gestionarUsuarios() {}
 }
 
+type Handler = () => void;
+
 describe('RolesGuard', () => {
-  const reflector = new Reflector();
-  const guard = new RolesGuard(reflector);
+  const guard = new RolesGuard(new Reflector());
 
   const httpContext = (
     user: unknown,
-    handler = TestController.prototype.adminOnly,
+    handler: Handler = TestController.prototype.editarEmpresa,
   ) => {
     const ctx = new ExecutionContextHost(
       [{ user }, {}, () => {}],
@@ -30,35 +36,25 @@ describe('RolesGuard', () => {
     const ctx = new ExecutionContextHost(
       [{}, {}, { req: { user } }, {}],
       TestController,
-      TestController.prototype.adminOnly,
+      TestController.prototype.editarEmpresa,
     );
     ctx.setType('graphql');
     return ctx;
   };
 
-  beforeEach(() => {
-    jest
-      .spyOn(reflector, 'getAllAndOverride')
-      .mockImplementation((_key, [handler]) =>
-        handler === TestController.prototype.adminOnly
-          ? [Role.admin]
-          : undefined,
-      );
-  });
-
-  it('allows handlers without @Roles', () => {
+  it('allows handlers without @Permiso', () => {
     expect(
       guard.canActivate(httpContext(undefined, TestController.prototype.open)),
     ).toBe(true);
   });
 
-  it('allows a user with a required role (REST)', () => {
+  it('allows a role that has the permission (REST)', () => {
     expect(guard.canActivate(httpContext({ id: 'u', rol: 'admin' }))).toBe(
       true,
     );
   });
 
-  it('forbids a user without the required role (REST)', () => {
+  it('forbids a role without the permission (REST)', () => {
     expect(() =>
       guard.canActivate(httpContext({ id: 'u', rol: 'empleado' })),
     ).toThrow(ForbiddenException);
@@ -68,6 +64,28 @@ describe('RolesGuard', () => {
     expect(guard.canActivate(gqlContext({ id: 'u', rol: 'admin' }))).toBe(true);
     expect(() =>
       guard.canActivate(gqlContext({ id: 'u', rol: 'calidad' })),
+    ).toThrow(ForbiddenException);
+  });
+
+  it('always lets super_admin through, even where no role is listed', () => {
+    const superAdmin = { id: 'u', rol: 'super_admin' };
+    expect(guard.canActivate(httpContext(superAdmin))).toBe(true);
+    expect(guard.canActivate(gqlContext(superAdmin))).toBe(true);
+    expect(
+      guard.canActivate(
+        httpContext(superAdmin, TestController.prototype.gestionarUsuarios),
+      ),
+    ).toBe(true);
+  });
+
+  it('keeps user management for super_admin only', () => {
+    expect(() =>
+      guard.canActivate(
+        httpContext(
+          { id: 'u', rol: 'admin' },
+          TestController.prototype.gestionarUsuarios,
+        ),
+      ),
     ).toThrow(ForbiddenException);
   });
 
