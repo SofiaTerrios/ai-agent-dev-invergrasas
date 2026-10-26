@@ -11,7 +11,12 @@ Pendiente con el negocio:
 - IG-22: confirmar que anular + reemitir (en vez de editar) es lo que quiere el negocio.
 - Validar la matriz de `docs/PERMISOS.md` y decidir qué pasa con el rol `empleado` y el registro público.
 
-Siguiente fase: datos maestros (IG-35, IG-36, IG-37, IG-38, IG-26, IG-40). Antes hay que resolver los choques con `Cliente` y `Pedido` (ver el plan).
+**Fase 3 (datos maestros: IG-35, IG-36, IG-37, IG-38, IG-26, IG-40)** implementada, en revisión. Después del deploy:
+
+- Completar NIT, ciudad y dirección de los clientes migrados (salen marcados «Datos incompletos» en Clientes).
+- Crear a Invergrasas como cliente con tipos Transportador y Destino, sus vehículos y el vehículo por defecto de cada conductor.
+
+Siguiente fase: entregas y recolecciones (IG-39, IG-27, IG-28, IG-31, IG-30, IG-32, IG-33). Antes hay que decidir si `Pedido` se migra a `Movimiento` o si conviven, y qué pasa con los pedidos ya registrados.
 
 ## Despliegue
 

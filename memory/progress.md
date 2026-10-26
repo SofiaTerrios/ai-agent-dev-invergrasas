@@ -48,6 +48,12 @@ Leyenda de estados:
 | IG-20 | Validar el formato del PDF con el negocio | `blocked`: PDFs de muestra listos; falta el visto bueno del negocio |
 | IG-21 | Firmante vinculada a la usuaria Adriana | `in-progress`: implementado; falta crear su usuario con la firma real |
 | IG-22 | Anular y reemitir certificados | `in-progress`: implementado; la propuesta falta confirmarla con el negocio |
+| IG-26 | Catálogo de productos y tipos de empaque | `in-progress`: implementado, en revisión |
+| IG-35 | Catálogos de ciudades y actividades económicas | `in-progress`: implementado, en revisión |
+| IG-36 | Empresa cliente con datos completos y tipos | `in-progress`: implementado; falta completar NIT/ciudad de los clientes migrados |
+| IG-37 | Sedes del cliente | `in-progress`: implementado; la copia en el certificado llega con IG-39 |
+| IG-38 | Contactos del cliente | `in-progress`: implementado; el alta rápida en el formulario llega con IG-39 |
+| IG-40 | Transportador, conductor y vehículos | `in-progress`: implementado; los valores por defecto del movimiento llegan con IG-39 |
 | IG-24 | Rol Super Administrador con acceso total | `done` |
 | IG-25 | Matriz de permisos y rol `entrega` | `done` (matriz pendiente de validar con el negocio) |
 | IG-29 | Gestión de usuarios por el Super Administrador | `done` |
@@ -63,4 +69,4 @@ Leyenda de estados:
 
 ## Última actualización
 
-- Fecha: 2026-10-26 (fase 2: IG-18 a IG-22)
+- Fecha: 2026-10-27 (fase 3: datos maestros)

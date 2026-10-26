@@ -24,9 +24,14 @@ La matriz vive en `backend/src/auth/roles.ts` (`PERMISOS`) y se aplica con `@Per
 | empresas · accesoTotal (todas, sin vínculo) | ✔ | ✔ | | | | |
 | empresas · crear | ✔ | | | | | |
 | empresas · editar | ✔ | ✔ | | | | |
-| clientes · leer | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
-| clientes · leerTodos (de todas las empresas) | ✔ | ✔ | | | | |
-| clientes · escribir | ✔ | ✔ | ✔ | | | |
+| clientes · leer (clientes, sedes y contactos de sus empresas) | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| clientes · escribir (clientes y sedes) | ✔ | ✔ | ✔ | | | |
+| contactos · escribir | ✔ | ✔ | ✔ | | ✔ | |
+| catalogos · leer (ciudades, actividades, productos, empaques) | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| catalogos · gestionarActividades | ✔ | | | | | |
+| catalogos · gestionarProductos (productos, empaques y combinaciones) | ✔ | ✔ | | | | |
+| vehiculos · leer | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| vehiculos · escribir (y vehículo por defecto del conductor) | ✔ | ✔ | | | | |
 | pedidos · leer | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
 | pedidos · escribir | ✔ | ✔ | ✔ | | | ✔ |
 | certificados · leer | ✔ | ✔ | ✔ | ✔ | | |
@@ -52,7 +57,8 @@ Además de la matriz, los datos de una empresa solo se ven si el usuario está v
 Diferencias con lo implementado y por qué:
 
 - **Empresas "—" para entrega:** se interpreta como "no entra al módulo Empresas". Igual puede listar *sus* empresas (`empresas · leer`), porque el resto de pantallas las necesita para elegir la empresa activa.
-- **Productos, entregas, inventario e informes:** los módulos aún no existen. Se agregan a `PERMISOS` cuando se construyan (IG-26, IG-39, IG-31, IG-33).
+- **Entregas, inventario e informes:** los módulos aún no existen. Se agregan a `PERMISOS` cuando se construyan (IG-39, IG-31, IG-33).
+- **Clientes para calidad y entrega:** «Ver» en la propuesta. Ven clientes, sedes y contactos de sus empresas; `entrega` además crea contactos (IG-38, para el alta rápida durante la entrega).
 - **Pedidos:** no están en la propuesta porque IG-39 los reemplaza por entregas. Mientras tanto mantienen los permisos que tenían.
 - **`empleado`:** no está en la propuesta. Falta decidir si los empleados existentes pasan a `entrega` u otro rol y si se elimina.
 
