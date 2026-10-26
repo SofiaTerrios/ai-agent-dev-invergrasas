@@ -31,6 +31,7 @@ Flujo: PR → CI verde (`.github/workflows/ci.yml`) → merge a `staging` → se
 | `FRONTEND_URL` | API | URL pública del frontend. En producción es el único origen permitido por CORS. |
 | `CERTIFICADOS_DIR` | API | `/var/data/certificados` (disco persistente). |
 | `PAGINATION_MAX_LIMIT` | API | Opcional; por defecto 100. |
+| `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PASSWORD` | Shell de la API | Solo para crear el primer super admin (`npm run super-admin`); no hace falta dejarlas definidas. |
 | `NEXT_PUBLIC_API_URL` | Web | URL pública de la API. Se incrusta **en el build**, así que hay que redeployar el frontend si cambia. |
 
 Los secretos viven solo en Render; ninguno se guarda en el repositorio (`.env` está en `.gitignore`).
@@ -50,11 +51,13 @@ Antes de producción, toda migración pasa por staging.
 
    Con las URLs `*.onrender.com` basta para empezar.
 3. Redeployar el web después de definir `NEXT_PUBLIC_API_URL`, porque se usa en el build.
-4. Crear el primer usuario admin. El registro público solo crea empleados, así que:
-   - registrarse en `/register`;
-   - en el shell de la BD de Render, ejecutar `UPDATE users SET rol = 'admin' WHERE email = '...';`.
+4. Crear el primer Super Administrador desde el shell del servicio API en Render:
 
-   Desde ahí, ese admin asigna roles con la mutation `updateUserRol`.
+   ```bash
+   SUPER_ADMIN_EMAIL=... SUPER_ADMIN_PASSWORD=... npm run super-admin
+   ```
+
+   Al ingresar se le pide cambiar la contraseña. Desde ahí crea los usuarios en `/dashboard/usuarios` (ver `docs/PERMISOS.md`).
 
 ## Dominio
 

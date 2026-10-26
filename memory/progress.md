@@ -43,6 +43,9 @@ Leyenda de estados:
 | IG-14 | Actualizar documentación y estado de tareas | `done` |
 | IG-15 | CI con GitHub Actions | `done` |
 | IG-16 | Despliegue (frontend, backend y BD) | `blocked`: configuración lista; falta crear cuenta/servicios en Render y elegir dominio |
+| IG-24 | Rol Super Administrador con acceso total | `in-progress`: implementado, en revisión |
+| IG-25 | Matriz de permisos y rol `entrega` | `in-progress`: implementado; la matriz falta validarla con el negocio |
+| IG-29 | Gestión de usuarios por el Super Administrador | `in-progress`: implementado, en revisión |
 
 ## Hitos
 
@@ -55,4 +58,4 @@ Leyenda de estados:
 
 ## Última actualización
 
-- Fecha: 2026-10-20 (IG-14)
+- Fecha: 2026-10-26 (IG-24, IG-25, IG-29)
