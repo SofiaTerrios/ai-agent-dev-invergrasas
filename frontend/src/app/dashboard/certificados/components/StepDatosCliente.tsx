@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Input from "@/components/ui/Input";
 import { fetchAllNodes } from "@/lib/graphql";
 import { GET_EMPRESAS_QUERY, type Empresa } from "@/graphql/empresas";
-import { GET_CLIENTES_BY_EMPRESA_QUERY, type Cliente } from "@/graphql/clientes";
+import { GET_CLIENTES_BY_EMPRESA_QUERY, formatNit, type Cliente } from "@/graphql/clientes";
 
 type DatosCliente = {
   empresa_id?: string;
@@ -40,7 +40,7 @@ export default function StepDatosCliente({
   // Clientes are kept with the empresa they were loaded for
   const [clientesState, setClientesState] = useState<{
     empresaId: string;
-    list: Pick<Cliente, "id" | "nombre">[];
+    list: Pick<Cliente, "id" | "razon_social" | "nit" | "dv">[];
   }>({ empresaId: "", list: [] });
   const loadingEmpresas = empresas === null;
   const clientes = clientesState.empresaId === empresa_id ? clientesState.list : [];
@@ -69,7 +69,15 @@ export default function StepDatosCliente({
 
   const onSelectCliente = (id: string) => {
     const cliente = clientes.find((c) => c.id === id);
-    onChange({ cliente_id: id, ...(cliente ? { empresa_cliente: cliente.nombre } : {}) });
+    onChange({
+      cliente_id: id,
+      ...(cliente
+        ? {
+            empresa_cliente: cliente.razon_social,
+            nit_cliente: formatNit(cliente.nit, cliente.dv),
+          }
+        : {}),
+    });
   };
 
   return (
@@ -120,7 +128,7 @@ export default function StepDatosCliente({
               <option value="">Otro (escribir manualmente)</option>
               {clientes.map((cliente) => (
                 <option key={cliente.id} value={cliente.id}>
-                  {cliente.nombre}
+                  {cliente.razon_social}
                 </option>
               ))}
             </select>

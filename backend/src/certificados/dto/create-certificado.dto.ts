@@ -60,4 +60,9 @@ export class CreateCertificadoDto {
 
   @IsObject({ message: 'parametros es obligatorio' })
   parametros!: Record<string, string>;
+
+  // Anulado certificado this one corrects (IG-22)
+  @IsOptional()
+  @IsUUID('all', { message: 'reemplaza_id debe ser un UUID válido' })
+  reemplaza_id?: string;
 }

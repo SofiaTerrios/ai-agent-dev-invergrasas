@@ -24,13 +24,20 @@ La matriz vive en `backend/src/auth/roles.ts` (`PERMISOS`) y se aplica con `@Per
 | empresas · accesoTotal (todas, sin vínculo) | ✔ | ✔ | | | | |
 | empresas · crear | ✔ | | | | | |
 | empresas · editar | ✔ | ✔ | | | | |
-| clientes · leer | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
-| clientes · leerTodos (de todas las empresas) | ✔ | ✔ | | | | |
-| clientes · escribir | ✔ | ✔ | ✔ | | | |
+| clientes · leer (clientes, sedes y contactos de sus empresas) | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| clientes · escribir (clientes y sedes) | ✔ | ✔ | ✔ | | | |
+| contactos · escribir | ✔ | ✔ | ✔ | | ✔ | |
+| catalogos · leer (ciudades, actividades, productos, empaques) | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| catalogos · gestionarActividades | ✔ | | | | | |
+| catalogos · gestionarProductos (productos, empaques y combinaciones) | ✔ | ✔ | | | | |
+| vehiculos · leer | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| vehiculos · escribir (y vehículo por defecto del conductor) | ✔ | ✔ | | | | |
 | pedidos · leer | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
 | pedidos · escribir | ✔ | ✔ | ✔ | | | ✔ |
 | certificados · leer | ✔ | ✔ | ✔ | ✔ | | |
 | certificados · escribir | ✔ | ✔ | | ✔ | | |
+| certificados · anular | ✔ | ✔ | | ✔ | | |
+| certificados · configurarFirmante | ✔ | | | | | |
 
 Además de la matriz, los datos de una empresa solo se ven si el usuario está vinculado a ella (`UserEmpresa`), salvo los roles con `empresas · accesoTotal`.
 
@@ -50,7 +57,8 @@ Además de la matriz, los datos de una empresa solo se ven si el usuario está v
 Diferencias con lo implementado y por qué:
 
 - **Empresas "—" para entrega:** se interpreta como "no entra al módulo Empresas". Igual puede listar *sus* empresas (`empresas · leer`), porque el resto de pantallas las necesita para elegir la empresa activa.
-- **Productos, entregas, inventario e informes:** los módulos aún no existen. Se agregan a `PERMISOS` cuando se construyan (IG-26, IG-39, IG-31, IG-33).
+- **Entregas, inventario e informes:** los módulos aún no existen. Se agregan a `PERMISOS` cuando se construyan (IG-39, IG-31, IG-33).
+- **Clientes para calidad y entrega:** «Ver» en la propuesta. Ven clientes, sedes y contactos de sus empresas; `entrega` además crea contactos (IG-38, para el alta rápida durante la entrega).
 - **Pedidos:** no están en la propuesta porque IG-39 los reemplaza por entregas. Mientras tanto mantienen los permisos que tenían.
 - **`empleado`:** no está en la propuesta. Falta decidir si los empleados existentes pasan a `entrega` u otro rol y si se elimina.
 
@@ -62,6 +70,15 @@ Diferencias con lo implementado y por qué:
 - Los usuarios creados por el super admin (y los de contraseña restablecida) deben cambiarla en el siguiente ingreso.
 - No se puede desactivar ni degradar al último `super_admin` activo, ni desactivarse a uno mismo.
 - Los cambios de rol, altas, bajas y restablecimientos de contraseña quedan en `audit_logs`.
+
+## Firmante de los certificados (IG-21)
+
+Todos los certificados de análisis los firma una sola persona (hoy, Adriana Rodríguez Urrea). Es un usuario del sistema con imagen de firma:
+
+1. En **Usuarios**, crear (o editar) su usuario y subir la imagen de la firma.
+2. En **Certificados**, el super admin pulsa **Asignar** / **Cambiar** en «Firmante de los certificados».
+
+Mientras no haya firmante, no se pueden generar certificados. Cada certificado guarda quién lo firmó (`firmante_id` y el nombre en `firmado_por`), así que cambiar la firmante o sus datos no altera los ya emitidos.
 
 ## Primer Super Administrador
 

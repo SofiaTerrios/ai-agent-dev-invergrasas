@@ -1,4 +1,4 @@
-import ClientesModule from "@/components/dashboard/ClientesModule";
+import ClientesModule from "@/components/dashboard/clientes/ClientesModule";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 
 export default function ClientesPage() {

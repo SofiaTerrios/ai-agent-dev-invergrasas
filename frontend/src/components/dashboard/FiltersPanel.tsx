@@ -8,7 +8,7 @@ export type OrdersFilters = {
 type FiltersPanelProps = {
   filters: OrdersFilters;
   // Clientes for the cliente filter; the filter is hidden when not given
-  clientes?: { id: string; nombre: string }[];
+  clientes?: { id: string; razon_social: string }[];
   onChange: (name: keyof OrdersFilters, value: string) => void;
   onReset: () => void;
 };
@@ -54,7 +54,7 @@ export default function FiltersPanel({
                 <option value="">Todos</option>
                 {clientes.map((cliente) => (
                   <option key={cliente.id} value={cliente.id}>
-                    {cliente.nombre}
+                    {cliente.razon_social}
                   </option>
                 ))}
               </select>

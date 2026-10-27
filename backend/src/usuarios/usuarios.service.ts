@@ -27,6 +27,9 @@ const USUARIO_ARGS = {
       include: { empresa: true },
       orderBy: { created_at: 'asc' },
     },
+    vehiculo_por_defecto: {
+      include: { transportador: { select: { id: true, razon_social: true } } },
+    },
   },
 } satisfies Prisma.UserDefaultArgs;
 

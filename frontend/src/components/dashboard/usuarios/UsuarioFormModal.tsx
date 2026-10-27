@@ -8,6 +8,11 @@ import { fetchAllNodes, graphqlRequest } from "@/lib/graphql";
 import { ROLES, ROL_LABELS, type Rol } from "@/lib/permisos";
 import { GET_EMPRESAS_QUERY, type Empresa } from "@/graphql/empresas";
 import {
+  ASIGNAR_VEHICULO_MUTATION,
+  GET_VEHICULOS_QUERY,
+  type Vehiculo,
+} from "@/graphql/catalogos";
+import {
   CREATE_USUARIO_MUTATION,
   FIRMA_MAX_BYTES,
   GET_USUARIO_FIRMA_QUERY,
@@ -76,6 +81,16 @@ export default function UsuarioFormModal({ usuario, onClose, onSuccess, token }:
   // undefined: unchanged; null: removed; string: new image (data URL)
   const [firma, setFirma] = useState<string | null | undefined>(undefined);
   const [firmaActual, setFirmaActual] = useState<string | null>(null);
+  // Default vehicle of a driver (rol entrega, IG-40)
+  const [vehiculos, setVehiculos] = useState<Vehiculo[]>([]);
+  const [vehiculoId, setVehiculoId] = useState(usuario?.vehiculo_por_defecto?.id ?? "");
+
+  useEffect(() => {
+    if (!token) return;
+    graphqlRequest<{ vehiculos: Vehiculo[] }>(GET_VEHICULOS_QUERY, {}, token)
+      .then((data) => setVehiculos(data.vehiculos))
+      .catch(() => setVehiculos([]));
+  }, [token]);
   const [empresas, setEmpresas] = useState<Empresa[] | null>(null);
   const [errors, setErrors] = useState<Errors>({});
   const [submitError, setSubmitError] = useState("");
@@ -128,7 +143,9 @@ export default function UsuarioFormModal({ usuario, onClose, onSuccess, token }:
   };
 
   const preview = firma === undefined ? firmaActual : firma;
-  const showFirma = values.rol === "entrega" || Boolean(preview);
+
+  const asignarVehiculo = (userId: string) =>
+    graphqlRequest(ASIGNAR_VEHICULO_MUTATION, { userId, vehiculoId: vehiculoId || null }, token);
 
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -150,7 +167,12 @@ export default function UsuarioFormModal({ usuario, onClose, onSuccess, token }:
           empresa_ids: values.empresa_ids,
           firma: firma ?? undefined,
         };
-        await graphqlRequest(CREATE_USUARIO_MUTATION, { input }, token);
+        const data = await graphqlRequest<{ createUsuario: Usuario }>(
+          CREATE_USUARIO_MUTATION,
+          { input },
+          token,
+        );
+        if (vehiculoId) await asignarVehiculo(data.createUsuario.id);
       } else {
         const input: UpdateUsuarioInput = {
           nombre: values.nombre.trim(),
@@ -162,6 +184,9 @@ export default function UsuarioFormModal({ usuario, onClose, onSuccess, token }:
           ...(firma !== undefined ? { firma } : {}),
         };
         await graphqlRequest(UPDATE_USUARIO_MUTATION, { id: usuario.id, input }, token);
+        if (vehiculoId !== (usuario.vehiculo_por_defecto?.id ?? "")) {
+          await asignarVehiculo(usuario.id);
+        }
       }
       onSuccess();
     } catch (error) {
@@ -260,6 +285,29 @@ export default function UsuarioFormModal({ usuario, onClose, onSuccess, token }:
               />
             </div>
 
+            {values.rol === "entrega" && (
+              <div className="space-y-1.5">
+                <label htmlFor="usuario-vehiculo" className="block text-sm font-medium text-[#1B4D1E]">
+                  Vehículo por defecto
+                </label>
+                <select
+                  id="usuario-vehiculo"
+                  value={vehiculoId}
+                  onChange={(e) => setVehiculoId(e.target.value)}
+                  disabled={isLoading}
+                  className={selectClass}
+                >
+                  <option value="">Sin vehículo</option>
+                  {vehiculos.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.placa} · {v.transportador.razon_social}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-[#83948D]">Se precarga en sus entregas; se puede cambiar en cada una.</p>
+              </div>
+            )}
+
             <fieldset className="space-y-2">
               <legend className="text-sm font-medium text-[#1B4D1E]">Empresas asignadas</legend>
               {empresas === null ? (
@@ -287,11 +335,13 @@ export default function UsuarioFormModal({ usuario, onClose, onSuccess, token }:
               )}
             </fieldset>
 
-            {showFirma && (
-              <div className="space-y-2">
+            <div className="space-y-2">
                 <label htmlFor="usuario-firma" className="block text-sm font-medium text-[#1B4D1E]">
-                  Firma (para los recibos de entrega)
+                  Firma (opcional)
                 </label>
+                <p className="text-xs text-[#83948D]">
+                  La usan los recibos de entrega y la firmante de los certificados.
+                </p>
                 {preview && (
                   <div className="flex items-center gap-3 rounded-lg border border-[#DDE8E2] p-2">
                     {/* eslint-disable-next-line @next/next/no-img-element -- data URL preview */}
@@ -315,8 +365,7 @@ export default function UsuarioFormModal({ usuario, onClose, onSuccess, token }:
                 />
                 <p className="text-xs text-[#83948D]">PNG o JPEG, máximo 300 KB.</p>
                 <FormError message={errors.firma} />
-              </div>
-            )}
+            </div>
 
             <FormError message={submitError} />
 

@@ -20,7 +20,9 @@ backend/   NestJS: API GraphQL en /graphql y REST en /api/*
   src/auditoria/     registro de acciones sensibles (audit_logs)
   src/cli/           comandos (crear el primer super admin)
   src/empresas/      empresas y asociación usuario–empresa
-  src/clientes/      clientes por empresa
+  src/clientes/      empresas cliente con NIT/DV, sedes y contactos
+  src/catalogos/     ciudades (DIVIPOLA), actividades, productos y empaques
+  src/vehiculos/     vehículos de los transportadores
   src/pedidos/       pedidos / entregas
   src/certificados/  certificados de análisis y descarga de PDF
   src/common/        paginación por cursor
@@ -32,9 +34,13 @@ backend/   NestJS: API GraphQL en /graphql y REST en /api/*
 
 - `User` (con `rol`: `super_admin` | `admin` | `comercial` | `calidad` | `entrega` | `empleado`) ↔ `Empresa` vía `UserEmpresa`. Un usuario con `deleted_at` está desactivado.
 - `AuditLog`: quién hizo qué acción sensible y sobre qué entidad.
-- `Empresa` 1–N `Cliente`, `Pedido` y `CertificadoAnalisis`.
+- `Empresa` 1–N `Cliente`, `Pedido`, `CertificadoAnalisis` y `Vehiculo`.
+- `Cliente` (empresa con la que trabaja Invergrasas): razón social, NIT + DV (único por empresa), registro, ciudad y tipos (`GENERADOR`, `TRANSPORTADOR`, `DESTINO`, `GESTOR`). 1–N `Sede` (exactamente una principal activa) y `Contacto`.
+- Catálogos: `Ciudad` (1121 municipios del DANE, cargados en la migración), `ActividadEconomica`, `Producto`, `TipoEmpaque` (retornable o no) y `ProductoEmpaque` (combinaciones válidas).
+- `Vehiculo`: placa (`ABC 123`, única por empresa) de un cliente transportador; `User.vehiculo_por_defecto_id` para los conductores.
 - `Pedido`: cliente, producto (`RBD` | `Oleina`), empaque (`Granel` | `Caneca` | `Balde`), `cantidad_kg` y fecha.
-- `CertificadoAnalisis` 1–N `ParametroAnalisis` (acidez, humedad, índice de yodo, etc.).
+- `CertificadoAnalisis` 1–N `ParametroAnalisis` (acidez, humedad, índice de yodo, etc.). Guarda quién lo firmó (`firmante_id`, `firmado_por`) y quién lo emitió. Un certificado anulado conserva su PDF y puede tener uno que lo corrige (`reemplaza_id`).
+- `Configuracion`: ajustes clave/valor del sistema (p. ej. `certificados.firmante_id`).
 
 ## Reglas transversales
 
@@ -44,7 +50,7 @@ backend/   NestJS: API GraphQL en /graphql y REST en /api/*
 - **Auditoría:** las acciones sensibles se guardan en `audit_logs` con `AuditoriaService`, dentro de la misma transacción que el cambio.
 - **Borrado lógico:** todos los modelos tienen `deleted_at`. Una extensión de Prisma oculta los registros borrados en las lecturas, y nunca se borran filas de verdad.
 - **Paginación:** los listados devuelven `XConnection { edges { cursor node } pageInfo { endCursor hasNextPage } totalCount }`, con `first`/`after`. El máximo por página se configura con `PAGINATION_MAX_LIMIT`.
-- **PDFs:** se guardan en `CERTIFICADOS_DIR` (fuera de git) y se descargan solo con token en `GET /api/certificados/:id/pdf`.
+- **PDFs:** se guardan en `CERTIFICADOS_DIR` (fuera de git) y se descargan solo con token en `GET /api/certificados/:id/pdf`. El logo está en `src/utils/pdf/assets/` y `nest-cli.json` lo copia a `dist/`; la firma sale del usuario firmante. Si falta alguno, no se guarda nada.
 - **Tipado:** `no-explicit-any` es error en backend y frontend.
 
 ## Frontend

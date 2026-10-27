@@ -53,7 +53,7 @@ const ORDERS_QUERY = `
           cantidad_kg
           fecha
           cliente {
-            nombre
+            razon_social
           }
         }
       }
@@ -100,7 +100,7 @@ export default function OrdersTable({
   const [loadingMore, setLoadingMore] = useState(false);
   const [clientesState, setClientesState] = useState<{
     empresaId: string;
-    list: Pick<Cliente, "id" | "nombre">[];
+    list: Pick<Cliente, "id" | "razon_social">[];
   }>({ empresaId: "", list: [] });
 
   // A cliente filter only makes sense within the empresa it belongs to
@@ -268,7 +268,7 @@ export default function OrdersTable({
               orders.map((order) => (
                 <TableRow key={order.id}>
                   <TableCell>{formatDate(order.fecha)}</TableCell>
-                  <TableCell>{order.cliente?.nombre ?? order.cliente_id}</TableCell>
+                  <TableCell>{order.cliente?.razon_social ?? order.cliente_id}</TableCell>
                   <TableCell>{PRODUCTO_LABELS[order.producto] ?? order.producto}</TableCell>
                   <TableCell>{order.tipo_empaque}</TableCell>
                   <TableCell className="text-right">
@@ -279,7 +279,7 @@ export default function OrdersTable({
                       <button
                         type="button"
                         onClick={() => onEdit(order)}
-                        aria-label={`Editar pedido del ${formatDate(order.fecha)} de ${order.cliente?.nombre ?? "cliente"}`}
+                        aria-label={`Editar pedido del ${formatDate(order.fecha)} de ${order.cliente?.razon_social ?? "cliente"}`}
                         className="rounded-md px-3 py-1.5 text-sm font-semibold text-[#0F6E2E] hover:bg-[#F2FAF4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0F6E2E]"
                       >
                         Editar

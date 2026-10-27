@@ -58,6 +58,7 @@ Antes de producción, toda migración pasa por staging.
    ```
 
    Al ingresar se le pide cambiar la contraseña. Desde ahí crea los usuarios en `/dashboard/usuarios` (ver `docs/PERMISOS.md`).
+5. Configurar la firmante de los certificados: crear su usuario con la imagen de firma y asignarla en `/dashboard/certificados`. Sin esto no se pueden generar certificados.
 
 ## Dominio
 

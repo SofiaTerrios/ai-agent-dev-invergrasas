@@ -1,7 +1,14 @@
 import { Field, Float, ID, InputType } from '@nestjs/graphql';
-import { CertificadoTipo, Producto, Role, TipoEmpaque } from './enums';
+import {
+  CertificadoTipo,
+  Producto,
+  Role,
+  TipoEmpaque,
+  TipoEmpresa,
+} from './enums';
 import {
   IsArray,
+  IsBoolean,
   IsDateString,
   IsEmail,
   IsEnum,
@@ -217,8 +224,9 @@ export class UpdateEmpresaInput {
   correo?: string;
 }
 
+// Datos de un local del cliente (IG-37)
 @InputType()
-export class CreateClienteInput {
+export class SedeDatosInput {
   @Field()
   @IsNotEmpty()
   @IsString()
@@ -227,50 +235,243 @@ export class CreateClienteInput {
   @Field()
   @IsNotEmpty()
   @IsString()
-  contacto!: string;
+  direccion!: string;
+
+  @Field(() => ID)
+  @IsUUID()
+  ciudad_id!: string;
+
+  @Field(() => ID, { nullable: true })
+  @IsOptional()
+  @IsUUID()
+  actividad_economica_id?: string | null;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  telefono?: string | null;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  barrio?: string | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'Solo aplica a Bogotá',
+  })
+  @IsOptional()
+  @IsString()
+  localidad?: string | null;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsEmail()
+  email?: string | null;
+}
+
+@InputType()
+export class CreateSedeInput extends SedeDatosInput {
+  @Field(() => ID)
+  @IsUUID()
+  cliente_id!: string;
+
+  @Field({ nullable: true, description: 'La convierte en la sede principal' })
+  @IsOptional()
+  @IsBoolean()
+  principal?: boolean;
+}
+
+@InputType()
+export class UpdateSedeInput {
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsNotEmpty()
+  @IsString()
+  nombre?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsNotEmpty()
+  @IsString()
+  direccion?: string;
+
+  @Field(() => ID, { nullable: true })
+  @IsOptional()
+  @IsUUID()
+  ciudad_id?: string;
+
+  @Field(() => ID, { nullable: true })
+  @IsOptional()
+  @IsUUID()
+  actividad_economica_id?: string | null;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  telefono?: string | null;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  barrio?: string | null;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  localidad?: string | null;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsEmail()
+  email?: string | null;
+
+  @Field({
+    nullable: true,
+    description: 'true la convierte en principal (la anterior deja de serlo)',
+  })
+  @IsOptional()
+  @IsBoolean()
+  principal?: boolean;
+}
+
+@InputType()
+export class CreateClienteInput {
+  @Field(() => ID, { description: 'Empresa de Invergrasas dueña del registro' })
+  @IsUUID()
+  empresa_id!: string;
 
   @Field()
   @IsNotEmpty()
   @IsString()
-  telefono!: string;
+  razon_social!: string;
 
-  @Field()
+  @Field({ description: 'Con o sin dígito de verificación: 900123456-7' })
   @IsNotEmpty()
-  @IsEmail()
-  correo!: string;
+  @IsString()
+  nit!: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  registro?: string | null;
 
   @Field(() => ID)
-  @IsNotEmpty()
   @IsUUID()
-  empresa_id!: string;
+  ciudad_id!: string;
+
+  @Field(() => [TipoEmpresa])
+  @IsArray()
+  @IsEnum(TipoEmpresa, { each: true })
+  tipos!: TipoEmpresa[];
+
+  @Field(() => SedeDatosInput, { description: 'Primera sede (principal)' })
+  @ValidateNested()
+  @Type(() => SedeDatosInput)
+  sede_principal!: SedeDatosInput;
 }
 
 @InputType()
 export class UpdateClienteInput {
   @Field({ nullable: true })
   @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  nombre?: string;
+  razon_social?: string;
 
   @Field({ nullable: true })
   @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  contacto?: string;
+  nit?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @IsOptional()
   @IsString()
-  telefono?: string;
-
-  @Field({ nullable: true })
-  @IsOptional()
-  @IsEmail()
-  correo?: string;
+  registro?: string | null;
 
   @Field(() => ID, { nullable: true })
   @IsOptional()
   @IsUUID()
-  empresa_id?: string;
+  ciudad_id?: string;
+
+  @Field(() => [TipoEmpresa], { nullable: true })
+  @IsOptional()
+  @IsArray()
+  @IsEnum(TipoEmpresa, { each: true })
+  tipos?: TipoEmpresa[];
+}
+
+// Persona del cliente que recibe o entrega (IG-38)
+@InputType()
+export class CreateContactoInput {
+  @Field(() => ID)
+  @IsUUID()
+  cliente_id!: string;
+
+  @Field(() => ID, { nullable: true })
+  @IsOptional()
+  @IsUUID()
+  sede_id?: string | null;
+
+  @Field()
+  @IsNotEmpty()
+  @IsString()
+  nombre!: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  documento?: string | null;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  cargo?: string | null;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  telefono?: string | null;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsEmail()
+  email?: string | null;
+}
+
+@InputType()
+export class UpdateContactoInput {
+  @Field(() => ID, { nullable: true })
+  @IsOptional()
+  @IsUUID()
+  sede_id?: string | null;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsNotEmpty()
+  @IsString()
+  nombre?: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  documento?: string | null;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  cargo?: string | null;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  telefono?: string | null;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsEmail()
+  email?: string | null;
 }
 
 @InputType()
@@ -440,4 +641,132 @@ export class CreateCertificadoInput {
   @ValidateNested()
   @Type(() => CertificadoParametrosInput)
   parametros!: CertificadoParametrosInput;
+
+  @Field(() => ID, {
+    nullable: true,
+    description: 'Certificado anulado que este corrige',
+  })
+  @IsOptional()
+  @IsUUID()
+  reemplaza_id?: string;
+}
+
+// ── Catálogos (IG-35, IG-26) ────────────────────────────────────────────────
+
+@InputType()
+export class ProductoInput {
+  @Field()
+  @IsNotEmpty()
+  @IsString()
+  nombre!: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  descripcion?: string | null;
+}
+
+@InputType()
+export class UpdateProductoInput {
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsNotEmpty()
+  @IsString()
+  nombre?: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  descripcion?: string | null;
+}
+
+@InputType()
+export class TipoEmpaqueInput {
+  @Field()
+  @IsNotEmpty()
+  @IsString()
+  nombre!: string;
+
+  @Field(() => Float, { nullable: true })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  capacidad?: number | null;
+
+  @Field(() => String, { nullable: true, description: 'Ej.: galones, kg' })
+  @IsOptional()
+  @IsString()
+  unidad?: string | null;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsBoolean()
+  retornable?: boolean;
+}
+
+@InputType()
+export class UpdateTipoEmpaqueInput {
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsNotEmpty()
+  @IsString()
+  nombre?: string;
+
+  @Field(() => Float, { nullable: true })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  capacidad?: number | null;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  unidad?: string | null;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsBoolean()
+  retornable?: boolean;
+}
+
+// ── Vehículos (IG-40) ───────────────────────────────────────────────────────
+
+@InputType()
+export class CreateVehiculoInput {
+  @Field(() => ID)
+  @IsUUID()
+  empresa_id!: string;
+
+  @Field(() => ID, { description: 'Cliente con tipo TRANSPORTADOR' })
+  @IsUUID()
+  transportador_id!: string;
+
+  @Field({ description: 'Se guarda como "ABC 123"' })
+  @IsNotEmpty()
+  @IsString()
+  placa!: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  descripcion?: string | null;
+}
+
+@InputType()
+export class UpdateVehiculoInput {
+  @Field(() => ID, { nullable: true })
+  @IsOptional()
+  @IsUUID()
+  transportador_id?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsNotEmpty()
+  @IsString()
+  placa?: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  descripcion?: string | null;
 }

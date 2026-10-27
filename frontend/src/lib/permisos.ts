@@ -34,8 +34,19 @@ const PERMISOS = {
   },
   clientes: {
     leer: TODOS,
-    leerTodos: ["admin"],
     escribir: ["admin", "comercial"],
+  },
+  contactos: {
+    escribir: ["admin", "comercial", "entrega"],
+  },
+  catalogos: {
+    leer: TODOS,
+    gestionarActividades: [],
+    gestionarProductos: ["admin"],
+  },
+  vehiculos: {
+    leer: TODOS,
+    escribir: ["admin"],
   },
   pedidos: {
     leer: TODOS,
@@ -44,6 +55,8 @@ const PERMISOS = {
   certificados: {
     leer: ["admin", "calidad", "comercial"],
     escribir: ["admin", "calidad"],
+    anular: ["admin", "calidad"],
+    configurarFirmante: [],
   },
 } as const satisfies Record<string, Record<string, readonly Rol[]>>;
 

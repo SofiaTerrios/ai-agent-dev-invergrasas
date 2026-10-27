@@ -36,10 +36,24 @@ export const PERMISOS = {
     editar: [Role.admin],
   },
   clientes: {
+    // Clientes, sedes and contactos of their empresas
     leer: TODOS,
-    // Listing clientes of every empresa at once
-    leerTodos: [Role.admin],
     escribir: [Role.admin, Role.comercial],
+  },
+  // Sedes follow the cliente permissions; contactos can also be created by
+  // entrega (quick create while delivering, IG-38)
+  contactos: {
+    escribir: [Role.admin, Role.comercial, Role.entrega],
+  },
+  catalogos: {
+    // Ciudades, actividades, productos, empaques
+    leer: TODOS,
+    gestionarActividades: [],
+    gestionarProductos: [Role.admin],
+  },
+  vehiculos: {
+    leer: TODOS,
+    escribir: [Role.admin],
   },
   pedidos: {
     leer: TODOS,
@@ -48,6 +62,9 @@ export const PERMISOS = {
   certificados: {
     leer: [Role.admin, Role.calidad, Role.comercial],
     escribir: [Role.admin, Role.calidad],
+    anular: [Role.admin, Role.calidad],
+    // Who signs every certificado (IG-21)
+    configurarFirmante: [],
   },
 } as const satisfies Record<string, Record<string, readonly Role[]>>;
 

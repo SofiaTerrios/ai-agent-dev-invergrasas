@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { promises as fs } from 'fs';
+import { existsSync, promises as fs } from 'fs';
 import path from 'path';
 import PDFDocument from 'pdfkit';
 import { certificadosDir } from './certificados-dir';
@@ -19,9 +19,25 @@ type CreateAnalisisPdfInput = {
   fecha_emision: Date;
   fecha_vencimiento: Date;
   firmado_por: string;
-  firma_img_path?: string | null;
-  logo_img_path?: string | null;
+  // Signature image of the firmante (PNG or JPEG)
+  firma_img: Buffer;
   parametros: ParametroFila[];
+};
+
+// Copied next to the compiled file by nest-cli.json (`assets`), so the same
+// path works from src/ (tests, ts-node) and from dist/.
+export function logoPath() {
+  return path.join(__dirname, 'assets', 'logo-invergrasas.jpg');
+}
+
+// Subscript digits (e.g. I₂, O₂): the standard PDF fonts lack these glyphs,
+// so they are drawn as small, lowered digits.
+const SUBINDICES: Record<string, string> = {
+  '₀': '0',
+  '₁': '1',
+  '₂': '2',
+  '₃': '3',
+  '₄': '4',
 };
 
 @Injectable()
@@ -40,6 +56,10 @@ export class AnalisisPdfService {
   async generateCertificadoAnalisisPdf(
     input: CreateAnalisisPdfInput,
   ): Promise<string> {
+    const logo = logoPath();
+    if (!existsSync(logo)) {
+      throw new Error(`Falta el logo del certificado en ${logo}`);
+    }
     const outputDir = certificadosDir();
     await fs.mkdir(outputDir, { recursive: true });
     const fileName = `cert-${input.certificadoId}.pdf`;
@@ -69,7 +89,7 @@ export class AnalisisPdfService {
       // cy empieza arriba y SUMA hacia abajo (coordenadas PDFKit nativas)
       let cy = this.MT;
 
-      cy = this.drawLogo(doc, input, cy);
+      cy = this.drawLogo(doc, cy);
       cy = this.drawCityDate(doc, input, cy);
       cy = this.drawRecipient(doc, input, cy);
       cy = this.drawSubject(doc, input, cy);
@@ -84,47 +104,14 @@ export class AnalisisPdfService {
 
   // ── Logo (arriba a la derecha) ────────────────────────────────────────────
 
-  private drawLogo(
-    doc: PDFKit.PDFDocument,
-    input: CreateAnalisisPdfInput,
-    cy: number,
-  ): number {
-    const logoH = 45;
-    const logoW = 100;
-
-    if (input.logo_img_path) {
-      try {
-        doc.image(input.logo_img_path, this.PW - this.MR - logoW, cy, {
-          width: logoW,
-          height: logoH,
-          fit: [logoW, logoH],
-          align: 'right',
-        });
-      } catch {
-        this.txt(
-          doc,
-          '[LOGO INVERGRASAS]',
-          this.ML,
-          cy,
-          'Helvetica-Bold',
-          8,
-          this.GRAY,
-          'right',
-        );
-      }
-    } else {
-      this.txt(
-        doc,
-        '[LOGO INVERGRASAS]',
-        this.ML,
-        cy,
-        'Helvetica-Bold',
-        8,
-        this.GRAY,
-        'right',
-      );
-    }
-    return cy + 50; // avanza hacia abajo
+  private drawLogo(doc: PDFKit.PDFDocument, cy: number): number {
+    const logoW = 110;
+    const logoH = 70;
+    doc.image(logoPath(), this.PW - this.MR - logoW, cy, {
+      fit: [logoW, logoH],
+      align: 'right',
+    });
+    return cy + logoH + 10;
   }
 
   // ── Ciudad + fecha ────────────────────────────────────────────────────────
@@ -163,11 +150,24 @@ export class AnalisisPdfService {
       11,
       this.BLACK,
     );
-    this.txt(doc, 'Ciudad', this.ML, cy + 34, 'Times-Roman', 11, this.BLACK);
-    return cy + 34 + 36;
+    let y = cy + 17;
+    if (input.nit_cliente) {
+      y += 17;
+      this.txt(
+        doc,
+        `NIT: ${input.nit_cliente}`,
+        this.ML,
+        y,
+        'Times-Bold',
+        11,
+        this.BLACK,
+      );
+    }
+    this.txt(doc, 'Ciudad', this.ML, y + 17, 'Times-Roman', 11, this.BLACK);
+    return y + 17 + 36;
   }
 
-  // ── Asunto (centrado) ─────────────────────────────────────────────────────
+  // ── Asunto (a la derecha) ─────────────────────────────────────────────────
 
   private drawSubject(
     doc: PDFKit.PDFDocument,
@@ -175,8 +175,8 @@ export class AnalisisPdfService {
     cy: number,
   ): number {
     const tipo = input.tipo === 'oleina' ? 'OLEINA DE PALMA' : 'RBD';
-    const label = `ASUNTO: CERTIFICADO ANALISIS - ${tipo}`;
-    this.txt(doc, label, this.ML, cy, 'Times-Bold', 11, this.BLACK, 'center');
+    const label = `ASUNTO: CERTIFICADO ANÁLISIS - ${tipo}`;
+    this.txt(doc, label, this.ML, cy, 'Times-Bold', 11, this.BLACK, 'right');
     return cy + 34;
   }
 
@@ -234,7 +234,7 @@ export class AnalisisPdfService {
   ): number {
     this.txt(
       doc,
-      'ESPECIFICACIONES FISICOQUIMICAS:',
+      'ESPECIFICACIONES FISICOQUÍMICAS:',
       this.ML,
       cy,
       'Times-Bold',
@@ -261,15 +261,7 @@ export class AnalisisPdfService {
       doc.rect(this.ML, y, col1, rowH).fillAndStroke(bg, this.BLACK);
       doc.rect(this.ML + col1, y, col2, rowH).fillAndStroke(bg, this.BLACK);
 
-      doc
-        .font(font)
-        .fontSize(10.5)
-        .fillColor(this.BLACK)
-        .text(label, this.ML + padX, y + padY, {
-          width: col1 - padX * 2,
-          lineBreak: false,
-          ellipsis: true,
-        });
+      this.txtSubindices(doc, label, this.ML + padX, y + padY, font, 10.5);
 
       doc
         .font(isHeader ? 'Times-Bold' : 'Times-Roman')
@@ -284,7 +276,7 @@ export class AnalisisPdfService {
       return y + rowH; // avanza hacia abajo
     };
 
-    cy = drawRow(cy, 'CARACTERISTICAS', 'RESULTADO', true);
+    cy = drawRow(cy, 'CARACTERÍSTICAS', 'RESULTADO', true);
     for (const p of input.parametros) {
       cy = drawRow(cy, p.nombre, this.formatValor(p.valor));
     }
@@ -336,17 +328,7 @@ export class AnalisisPdfService {
     const sigH = 65;
     const sigW = 130;
 
-    if (input.firma_img_path) {
-      try {
-        doc.image(input.firma_img_path, this.ML, cy, {
-          width: sigW,
-          height: sigH,
-          fit: [sigW, sigH],
-        });
-      } catch {
-        // espacio en blanco si no se encuentra
-      }
-    }
+    doc.image(input.firma_img, this.ML, cy, { fit: [sigW, sigH] });
 
     cy += sigH + 2;
 
@@ -361,7 +343,7 @@ export class AnalisisPdfService {
     // Nombre y empresa del firmante
     this.txt(
       doc,
-      input.firmado_por,
+      input.firmado_por.toUpperCase(),
       this.ML,
       cy + 4,
       'Times-Roman',
@@ -414,6 +396,28 @@ export class AnalisisPdfService {
     });
   }
 
+  // Left-aligned single line where subscript digits are drawn smaller and lower.
+  private txtSubindices(
+    doc: PDFKit.PDFDocument,
+    text: string,
+    x: number,
+    y: number,
+    font: string,
+    size: number,
+  ): void {
+    const subSize = size * 0.7;
+    let cx = x;
+    for (const part of text.split(/([₀-₄]+)/u)) {
+      if (!part) continue;
+      const isSub = /^[₀-₄]+$/u.test(part);
+      const value = isSub ? [...part].map((c) => SUBINDICES[c]).join('') : part;
+      const fontSize = isSub ? subSize : size;
+      doc.font(font).fontSize(fontSize).fillColor(this.BLACK);
+      doc.text(value, cx, isSub ? y + size * 0.35 : y, { lineBreak: false });
+      cx += doc.widthOfString(value);
+    }
+  }
+
   // ── Helpers de fecha y formato ────────────────────────────────────────────
 
   private formatFechaEmision(date: Date): string {
@@ -432,7 +436,7 @@ export class AnalisisPdfService {
       'diciembre',
     ];
     const dd = String(date.getDate()).padStart(2, '0');
-    return `Bogota D.C, ${months[date.getMonth()]} ${dd} de ${date.getFullYear()}`;
+    return `Bogotá D.C, ${months[date.getMonth()]} ${dd} de ${date.getFullYear()}`;
   }
 
   private formatFechaCorta(date: Date): string {

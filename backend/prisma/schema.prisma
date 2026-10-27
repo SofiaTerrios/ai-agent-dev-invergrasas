@@ -20,23 +20,29 @@ enum Rol {
 
 // deleted_at marca al usuario como desactivado: no puede iniciar sesión.
 model User {
-  id                    String        @id @default(uuid())
-  nombre                String
-  email                 String        @unique
-  password              String
-  rol                   Rol           @default(empleado)
-  documento             String?
-  telefono              String?
+  id                      String                @id @default(uuid())
+  nombre                  String
+  email                   String                @unique
+  password                String
+  rol                     Rol                   @default(empleado)
+  documento               String?
+  telefono                String?
   // Se pide cambiar la contraseña en el próximo ingreso
-  debe_cambiar_password Boolean       @default(false)
+  debe_cambiar_password   Boolean               @default(false)
   // Imagen de la firma (rol entrega, para los recibos)
-  firma                 Bytes?
-  firma_mime            String?
-  created_at            DateTime      @default(now())
-  deleted_at            DateTime?
-  empresas              UserEmpresa[]
-  pedidos               Pedido[]      @relation("PedidosCreados")
-  auditoria             AuditLog[]
+  firma                   Bytes?
+  firma_mime              String?
+  // Conductores (rol entrega): vehículo que se precarga en sus movimientos
+  vehiculo_por_defecto_id String?
+  created_at              DateTime              @default(now())
+  deleted_at              DateTime?
+  empresas                UserEmpresa[]
+  pedidos                 Pedido[]              @relation("PedidosCreados")
+  auditoria               AuditLog[]
+  certificadosFirmados    CertificadoAnalisis[] @relation("CertificadoFirmante")
+  certificadosEmitidos    CertificadoAnalisis[] @relation("CertificadoEmisor")
+  certificadosAnulados    CertificadoAnalisis[] @relation("CertificadoAnulador")
+  vehiculo_por_defecto    Vehiculo?             @relation(fields: [vehiculo_por_defecto_id], references: [id], onDelete: SetNull)
 
   @@map("users")
 }
@@ -72,6 +78,7 @@ model Empresa {
   clientes     Cliente[]
   pedidos      Pedido[]
   certificados CertificadoAnalisis[]
+  vehiculos    Vehiculo[]
 
   @@map("empresas")
 }
@@ -91,21 +98,177 @@ model UserEmpresa {
   @@map("user_empresas")
 }
 
+// Papeles de una empresa cliente en los certificados (IG-36). Puede tener varios.
+enum TipoEmpresa {
+  GENERADOR
+  TRANSPORTADOR
+  DESTINO
+  GESTOR
+}
+
+// Empresa con la que trabaja Invergrasas (IG-36). empresa_id es el tenant:
+// la empresa de Invergrasas dueña del registro.
 model Cliente {
   id           String                @id @default(uuid())
-  nombre       String
-  contacto     String
-  telefono     String
-  correo       String
+  razon_social String
+  // Null solo en clientes migrados que aún no tienen NIT (dato incompleto)
+  nit          String?
+  // Dígito de verificación, calculado del NIT
+  dv           String?
+  // Registro ambiental o sanitario
+  registro     String?
+  ciudad_id    String?
+  tipos        TipoEmpresa[]         @default([GENERADOR])
   empresa_id   String
   created_at   DateTime              @default(now())
+  updated_at   DateTime              @default(now()) @updatedAt
   deleted_at   DateTime?
   empresa      Empresa               @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
+  ciudad       Ciudad?               @relation(fields: [ciudad_id], references: [id], onDelete: Restrict)
   pedidos      Pedido[]
   certificados CertificadoAnalisis[]
+  sedes        Sede[]
+  contactos    Contacto[]
+  vehiculos    Vehiculo[]
 
+  // El NIT no se repite dentro de un tenant (los borrados lo siguen ocupando)
+  @@unique([empresa_id, nit])
   @@index([empresa_id])
   @@map("clientes")
+}
+
+// Municipios de Colombia (DIVIPOLA del DANE), cargados en la migración (IG-35).
+model Ciudad {
+  id              String    @id @default(uuid())
+  codigo_dane     String    @unique
+  nombre          String
+  departamento    String
+  // Nombre en minúsculas y sin tildes, para buscar "bogota" o "soa"
+  nombre_busqueda String
+  deleted_at      DateTime?
+  clientes        Cliente[]
+  sedes           Sede[]
+
+  @@index([nombre_busqueda])
+  @@map("ciudades")
+}
+
+model ActividadEconomica {
+  id         String    @id @default(uuid())
+  nombre     String    @unique
+  created_at DateTime  @default(now())
+  deleted_at DateTime?
+  sedes      Sede[]
+
+  @@map("actividades_economicas")
+}
+
+// Local de un cliente (IG-37). Desactivar = borrado lógico. Cada cliente tiene
+// exactamente una sede principal activa (lo garantiza el servicio).
+model Sede {
+  id                     String              @id @default(uuid())
+  cliente_id             String
+  nombre                 String
+  actividad_economica_id String?
+  // Opcionales solo por los clientes migrados; la API los pide al crear
+  direccion              String?
+  telefono               String?
+  barrio                 String?
+  localidad              String?
+  email                  String?
+  ciudad_id              String?
+  principal              Boolean             @default(false)
+  created_at             DateTime            @default(now())
+  updated_at             DateTime            @default(now()) @updatedAt
+  deleted_at             DateTime?
+  cliente                Cliente             @relation(fields: [cliente_id], references: [id], onDelete: Restrict)
+  actividad_economica    ActividadEconomica? @relation(fields: [actividad_economica_id], references: [id], onDelete: Restrict)
+  ciudad                 Ciudad?             @relation(fields: [ciudad_id], references: [id], onDelete: Restrict)
+  contactos              Contacto[]
+
+  @@index([cliente_id])
+  @@map("sedes")
+}
+
+// Persona del cliente que recibe o entrega (IG-38). No es usuario del sistema.
+model Contacto {
+  id         String    @id @default(uuid())
+  cliente_id String
+  sede_id    String?
+  nombre     String
+  documento  String?
+  cargo      String?
+  telefono   String?
+  email      String?
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now()) @updatedAt
+  deleted_at DateTime?
+  cliente    Cliente   @relation(fields: [cliente_id], references: [id], onDelete: Restrict)
+  sede       Sede?     @relation(fields: [sede_id], references: [id], onDelete: Restrict)
+
+  @@index([cliente_id])
+  @@map("contactos")
+}
+
+// Catálogo de productos que se entregan (IG-26)
+model Producto {
+  id          String            @id @default(uuid())
+  nombre      String            @unique
+  descripcion String?
+  created_at  DateTime          @default(now())
+  deleted_at  DateTime?
+  empaques    ProductoEmpaque[]
+
+  @@map("productos")
+}
+
+// Galón, caneca, bidón, granel... Los retornables cuentan en el inventario de envases.
+model TipoEmpaque {
+  id         String            @id @default(uuid())
+  nombre     String            @unique
+  capacidad  Decimal?          @db.Decimal(10, 2)
+  unidad     String?
+  retornable Boolean           @default(false)
+  created_at DateTime          @default(now())
+  deleted_at DateTime?
+  productos  ProductoEmpaque[]
+
+  @@map("tipos_empaque")
+}
+
+// Combinaciones válidas de producto y empaque (p. ej. oleína en galón)
+model ProductoEmpaque {
+  id              String      @id @default(uuid())
+  producto_id     String
+  tipo_empaque_id String
+  created_at      DateTime    @default(now())
+  deleted_at      DateTime?
+  producto        Producto    @relation(fields: [producto_id], references: [id], onDelete: Restrict)
+  tipo_empaque    TipoEmpaque @relation(fields: [tipo_empaque_id], references: [id], onDelete: Restrict)
+
+  @@unique([producto_id, tipo_empaque_id])
+  @@map("productos_empaques")
+}
+
+// Vehículo de una empresa transportadora (IG-40). empresa_id es el tenant.
+model Vehiculo {
+  id               String    @id @default(uuid())
+  empresa_id       String
+  // Cliente con tipo TRANSPORTADOR
+  transportador_id String
+  // Mayúsculas, formato "ABC 123"
+  placa            String
+  descripcion      String?
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @default(now()) @updatedAt
+  deleted_at       DateTime?
+  empresa          Empresa   @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
+  transportador    Cliente   @relation(fields: [transportador_id], references: [id], onDelete: Restrict)
+  conductores      User[]
+
+  @@unique([empresa_id, placa])
+  @@index([transportador_id])
+  @@map("vehiculos")
 }
 
 model Pedido {
@@ -135,7 +298,7 @@ enum CertificadoTipo {
 }
 
 model CertificadoAnalisis {
-  id                String              @id @default(uuid())
+  id                String               @id @default(uuid())
   // Tenant. Nullable only for legacy rows that could not be backfilled.
   empresa_id        String?
   cliente_id        String?
@@ -143,20 +306,46 @@ model CertificadoAnalisis {
   empresa_cliente   String
   nit_cliente       String?
   lote              String
-  peso_kg           Decimal?            @db.Decimal(10, 2)
-  fecha_emision     DateTime            @default(now())
+  peso_kg           Decimal?             @db.Decimal(10, 2)
+  fecha_emision     DateTime             @default(now())
   fecha_vencimiento DateTime
-  firmado_por       String              @default("ADRIANA RODRIGUEZ URREA")
+  // Name of the firmante when it was issued: later changes do not alter it
+  firmado_por       String
+  firmante_id       String?
+  // User who generated it
+  emitido_por       String?
   archivo_url       String?
-  created_at        DateTime            @default(now())
+  // Anulado: stays in the history (and its PDF), marked as not valid
+  anulado_at        DateTime?
+  anulado_por       String?
+  motivo_anulacion  String?
+  // Anulado certificado this one corrects
+  reemplaza_id      String?              @unique
+  created_at        DateTime             @default(now())
   deleted_at        DateTime?
   parametros        ParametroAnalisis[]
-  empresa           Empresa?            @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
-  cliente           Cliente?            @relation(fields: [cliente_id], references: [id], onDelete: Restrict)
+  empresa           Empresa?             @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
+  cliente           Cliente?             @relation(fields: [cliente_id], references: [id], onDelete: Restrict)
+  firmante          User?                @relation("CertificadoFirmante", fields: [firmante_id], references: [id], onDelete: Restrict)
+  emisor            User?                @relation("CertificadoEmisor", fields: [emitido_por], references: [id], onDelete: Restrict)
+  anulador          User?                @relation("CertificadoAnulador", fields: [anulado_por], references: [id], onDelete: Restrict)
+  reemplaza         CertificadoAnalisis? @relation("Reemplazo", fields: [reemplaza_id], references: [id], onDelete: Restrict)
+  reemplazado_por   CertificadoAnalisis? @relation("Reemplazo")
 
   @@index([empresa_id])
   @@index([cliente_id])
+  @@index([fecha_emision])
   @@map("certificados_analisis")
+}
+
+// System settings editable by the super admin (e.g. the certificado firmante).
+model Configuracion {
+  clave      String    @id
+  valor      String
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
+  @@map("configuracion")
 }
 
 model ParametroAnalisis {

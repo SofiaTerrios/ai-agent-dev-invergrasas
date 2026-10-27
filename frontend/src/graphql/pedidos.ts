@@ -22,7 +22,7 @@ export type Pedido = {
   tipo_empaque: TipoEmpaque;
   cantidad_kg: number;
   fecha: string;
-  cliente?: { nombre?: string } | null;
+  cliente?: { razon_social?: string } | null;
 };
 
 export type PedidoInput = {
