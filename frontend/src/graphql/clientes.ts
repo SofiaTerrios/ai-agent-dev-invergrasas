@@ -86,7 +86,7 @@ export const GET_CLIENTE_QUERY = `
   }
 `;
 
-// Light list for selects (pedidos, certificados)
+// Light list for selects (certificados)
 export const GET_CLIENTES_BY_EMPRESA_QUERY = `
   query GetClientesByEmpresa($empresaId: ID!, $first: Int, $after: String) {
     clientesByEmpresa(empresaId: $empresaId, first: $first, after: $after) {

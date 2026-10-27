@@ -1,10 +1,6 @@
-import PedidosModule from "@/components/dashboard/PedidosModule";
-import DashboardLayout from "@/components/layouts/DashboardLayout";
+import { redirect } from "next/navigation";
 
+// Pedidos became movimientos de entrega (IG-39): old links land on Entregas
 export default function PedidosPage() {
-  return (
-    <DashboardLayout>
-      <PedidosModule />
-    </DashboardLayout>
-  );
+  redirect("/dashboard/entregas");
 }

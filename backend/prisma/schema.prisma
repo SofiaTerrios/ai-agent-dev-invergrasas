@@ -37,12 +37,15 @@ model User {
   created_at              DateTime              @default(now())
   deleted_at              DateTime?
   empresas                UserEmpresa[]
-  pedidos                 Pedido[]              @relation("PedidosCreados")
   auditoria               AuditLog[]
   certificadosFirmados    CertificadoAnalisis[] @relation("CertificadoFirmante")
   certificadosEmitidos    CertificadoAnalisis[] @relation("CertificadoEmisor")
   certificadosAnulados    CertificadoAnalisis[] @relation("CertificadoAnulador")
   vehiculo_por_defecto    Vehiculo?             @relation(fields: [vehiculo_por_defecto_id], references: [id], onDelete: SetNull)
+  movimientosEntregados   Movimiento[]          @relation("MovimientoEntrega")
+  movimientosCreados      Movimiento[]          @relation("MovimientoCreador")
+  movimientosAnulados     Movimiento[]          @relation("MovimientoAnulador")
+  ajustesInventario       InventarioEnvase[]
 
   @@map("users")
 }
@@ -76,9 +79,10 @@ model Empresa {
   deleted_at   DateTime?
   users        UserEmpresa[]
   clientes     Cliente[]
-  pedidos      Pedido[]
   certificados CertificadoAnalisis[]
   vehiculos    Vehiculo[]
+  movimientos  Movimiento[]
+  inventario   InventarioEnvase[]
 
   @@map("empresas")
 }
@@ -125,11 +129,14 @@ model Cliente {
   deleted_at   DateTime?
   empresa      Empresa               @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
   ciudad       Ciudad?               @relation(fields: [ciudad_id], references: [id], onDelete: Restrict)
-  pedidos      Pedido[]
   certificados CertificadoAnalisis[]
   sedes        Sede[]
   contactos    Contacto[]
   vehiculos    Vehiculo[]
+  movimientos  Movimiento[]          @relation("MovimientoCliente")
+  transportes  Movimiento[]          @relation("MovimientoTransportador")
+  destinos     Movimiento[]          @relation("MovimientoDestino")
+  inventario   InventarioEnvase[]
 
   // El NIT no se repite dentro de un tenant (los borrados lo siguen ocupando)
   @@unique([empresa_id, nit])
@@ -185,6 +192,7 @@ model Sede {
   actividad_economica    ActividadEconomica? @relation(fields: [actividad_economica_id], references: [id], onDelete: Restrict)
   ciudad                 Ciudad?             @relation(fields: [ciudad_id], references: [id], onDelete: Restrict)
   contactos              Contacto[]
+  movimientos            Movimiento[]
 
   @@index([cliente_id])
   @@map("sedes")
@@ -192,19 +200,20 @@ model Sede {
 
 // Persona del cliente que recibe o entrega (IG-38). No es usuario del sistema.
 model Contacto {
-  id         String    @id @default(uuid())
-  cliente_id String
-  sede_id    String?
-  nombre     String
-  documento  String?
-  cargo      String?
-  telefono   String?
-  email      String?
-  created_at DateTime  @default(now())
-  updated_at DateTime  @default(now()) @updatedAt
-  deleted_at DateTime?
-  cliente    Cliente   @relation(fields: [cliente_id], references: [id], onDelete: Restrict)
-  sede       Sede?     @relation(fields: [sede_id], references: [id], onDelete: Restrict)
+  id          String       @id @default(uuid())
+  cliente_id  String
+  sede_id     String?
+  nombre      String
+  documento   String?
+  cargo       String?
+  telefono    String?
+  email       String?
+  created_at  DateTime     @default(now())
+  updated_at  DateTime     @default(now()) @updatedAt
+  deleted_at  DateTime?
+  cliente     Cliente      @relation(fields: [cliente_id], references: [id], onDelete: Restrict)
+  sede        Sede?        @relation(fields: [sede_id], references: [id], onDelete: Restrict)
+  movimientos Movimiento[]
 
   @@index([cliente_id])
   @@map("contactos")
@@ -218,20 +227,23 @@ model Producto {
   created_at  DateTime          @default(now())
   deleted_at  DateTime?
   empaques    ProductoEmpaque[]
+  lineas      MovimientoLinea[]
 
   @@map("productos")
 }
 
 // Galón, caneca, bidón, granel... Los retornables cuentan en el inventario de envases.
 model TipoEmpaque {
-  id         String            @id @default(uuid())
-  nombre     String            @unique
-  capacidad  Decimal?          @db.Decimal(10, 2)
+  id         String             @id @default(uuid())
+  nombre     String             @unique
+  capacidad  Decimal?           @db.Decimal(10, 2)
   unidad     String?
-  retornable Boolean           @default(false)
-  created_at DateTime          @default(now())
+  retornable Boolean            @default(false)
+  created_at DateTime           @default(now())
   deleted_at DateTime?
   productos  ProductoEmpaque[]
+  lineas     MovimientoLinea[]
+  inventario InventarioEnvase[]
 
   @@map("tipos_empaque")
 }
@@ -252,44 +264,24 @@ model ProductoEmpaque {
 
 // Vehículo de una empresa transportadora (IG-40). empresa_id es el tenant.
 model Vehiculo {
-  id               String    @id @default(uuid())
+  id               String       @id @default(uuid())
   empresa_id       String
   // Cliente con tipo TRANSPORTADOR
   transportador_id String
   // Mayúsculas, formato "ABC 123"
   placa            String
   descripcion      String?
-  created_at       DateTime  @default(now())
-  updated_at       DateTime  @default(now()) @updatedAt
+  created_at       DateTime     @default(now())
+  updated_at       DateTime     @default(now()) @updatedAt
   deleted_at       DateTime?
-  empresa          Empresa   @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
-  transportador    Cliente   @relation(fields: [transportador_id], references: [id], onDelete: Restrict)
+  empresa          Empresa      @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
+  transportador    Cliente      @relation(fields: [transportador_id], references: [id], onDelete: Restrict)
   conductores      User[]
+  movimientos      Movimiento[]
 
   @@unique([empresa_id, placa])
   @@index([transportador_id])
   @@map("vehiculos")
-}
-
-model Pedido {
-  id           String    @id @default(uuid())
-  empresa_id   String
-  cliente_id   String
-  creado_por   String
-  producto     String
-  tipo_empaque String
-  cantidad_kg  Decimal   @db.Decimal(10, 2)
-  fecha        DateTime
-  created_at   DateTime  @default(now())
-  deleted_at   DateTime?
-  empresa      Empresa   @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
-  cliente      Cliente   @relation(fields: [cliente_id], references: [id], onDelete: Restrict)
-  usuario      User      @relation("PedidosCreados", fields: [creado_por], references: [id], onDelete: Restrict)
-
-  @@index([empresa_id])
-  @@index([cliente_id])
-  @@index([creado_por])
-  @@map("pedidos")
 }
 
 enum CertificadoTipo {
@@ -359,4 +351,126 @@ model ParametroAnalisis {
 
   @@index([certificado_id])
   @@map("parametros_analisis")
+}
+
+// ── Entregas y recolecciones (IG-39, IG-27, IG-28, IG-30, IG-31) ────────────
+
+enum TipoMovimiento {
+  ENTREGA
+  RECOLECCION
+  ENTREGA_Y_RECOLECCION
+}
+
+// Visita a un cliente: entrega de producto, recolección de envases o ambas.
+// Su certificado (PDF) sale del snapshot, nunca de los datos actuales.
+model Movimiento {
+  id                 String             @id @default(uuid())
+  empresa_id         String
+  // Consecutivo por empresa y año, asignado en el backend (SecuenciaMovimiento)
+  numero             Int
+  anio               Int
+  tipo               TipoMovimiento
+  fecha              DateTime           @db.Date
+  cliente_id         String
+  sede_id            String?
+  contacto_id        String?
+  // Conductor (rol entrega): firma el certificado
+  usuario_entrega_id String
+  vehiculo_id        String?
+  transportador_id   String?
+  destino_id         String?
+  observacion        String?
+  // Copia de cliente, sede, contacto, conductor, vehículo, transportador y destino al emitir
+  snapshot           Json
+  // Firma del conductor al emitir
+  firma_entrega      Bytes?
+  firma_entrega_mime String?
+  archivo_url        String?
+  creado_por         String
+  anulado_at         DateTime?
+  anulado_por        String?
+  motivo_anulacion   String?
+  // Pedido del que viene, en los movimientos migrados de la tabla pedidos
+  origen_pedido_id   String?            @unique
+  created_at         DateTime           @default(now())
+  deleted_at         DateTime?
+  empresa            Empresa            @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
+  cliente            Cliente            @relation("MovimientoCliente", fields: [cliente_id], references: [id], onDelete: Restrict)
+  sede               Sede?              @relation(fields: [sede_id], references: [id], onDelete: Restrict)
+  contacto           Contacto?          @relation(fields: [contacto_id], references: [id], onDelete: Restrict)
+  usuario_entrega    User               @relation("MovimientoEntrega", fields: [usuario_entrega_id], references: [id], onDelete: Restrict)
+  vehiculo           Vehiculo?          @relation(fields: [vehiculo_id], references: [id], onDelete: Restrict)
+  transportador      Cliente?           @relation("MovimientoTransportador", fields: [transportador_id], references: [id], onDelete: Restrict)
+  destino            Cliente?           @relation("MovimientoDestino", fields: [destino_id], references: [id], onDelete: Restrict)
+  creador            User               @relation("MovimientoCreador", fields: [creado_por], references: [id], onDelete: Restrict)
+  anulador           User?              @relation("MovimientoAnulador", fields: [anulado_por], references: [id], onDelete: Restrict)
+  lineas             MovimientoLinea[]
+  inventario         InventarioEnvase[]
+
+  @@unique([empresa_id, anio, numero])
+  @@index([cliente_id])
+  @@index([usuario_entrega_id])
+  @@index([fecha])
+  @@map("movimientos")
+}
+
+model MovimientoLinea {
+  id                String      @id @default(uuid())
+  movimiento_id     String
+  orden             Int
+  // Null en líneas de solo recolección
+  producto_id       String?
+  // kg, galón o litro
+  unidad_medida     String?
+  cantidad          Decimal?    @db.Decimal(12, 2)
+  tipo_empaque_id   String
+  // Envases llenos entregados
+  cantidad_envases  Int         @default(0)
+  vacios_recibidos  Int         @default(0)
+  vacios_entregados Int         @default(0)
+  deleted_at        DateTime?
+  movimiento        Movimiento  @relation(fields: [movimiento_id], references: [id], onDelete: Restrict)
+  producto          Producto?   @relation(fields: [producto_id], references: [id], onDelete: Restrict)
+  tipo_empaque      TipoEmpaque @relation(fields: [tipo_empaque_id], references: [id], onDelete: Restrict)
+
+  @@index([movimiento_id])
+  @@map("movimiento_lineas")
+}
+
+// Último consecutivo usado por empresa y año. Se incrementa con un UPSERT
+// atómico, así dos emisiones simultáneas nunca reciben el mismo número.
+model SecuenciaMovimiento {
+  empresa_id String
+  anio       Int
+  ultimo     Int
+  deleted_at DateTime?
+
+  @@id([empresa_id, anio])
+  @@map("secuencias_movimiento")
+}
+
+// Libro de envases retornables por cliente (IG-31): + entregados al cliente,
+// - recogidos. El saldo es la suma, sin contar movimientos anulados.
+model InventarioEnvase {
+  id              String      @id @default(uuid())
+  empresa_id      String
+  cliente_id      String
+  tipo_empaque_id String
+  cantidad        Int
+  // Null en los ajustes manuales (saldo inicial)
+  movimiento_id   String?
+  motivo          String?
+  creado_por      String?
+  fecha           DateTime    @db.Date
+  created_at      DateTime    @default(now())
+  deleted_at      DateTime?
+  empresa         Empresa     @relation(fields: [empresa_id], references: [id], onDelete: Restrict)
+  cliente         Cliente     @relation(fields: [cliente_id], references: [id], onDelete: Restrict)
+  tipo_empaque    TipoEmpaque @relation(fields: [tipo_empaque_id], references: [id], onDelete: Restrict)
+  movimiento      Movimiento? @relation(fields: [movimiento_id], references: [id], onDelete: Restrict)
+  creador         User?       @relation(fields: [creado_por], references: [id], onDelete: Restrict)
+
+  @@index([cliente_id, tipo_empaque_id])
+  @@index([movimiento_id])
+  @@map("inventario_envases")
 }

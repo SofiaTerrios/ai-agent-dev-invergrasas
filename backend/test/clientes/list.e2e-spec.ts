@@ -109,18 +109,18 @@ describe('Clientes E2E - List (cursor pagination)', () => {
     expect(res.errors?.[0]?.message).toBe('Cursor inválido');
   });
 
-  it('paginates the REST pedidos listing via query params', async () => {
+  it('paginates REST listings via query params', async () => {
     const res = await request(app.getHttpServer())
-      .get('/api/pedidos?first=5')
+      .get('/api/empresas?first=5')
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
     expect(res.body).toMatchObject({
-      edges: [],
+      edges: [{ node: { id: empresaId } }],
       pageInfo: { hasNextPage: false },
     });
 
     await request(app.getHttpServer())
-      .get('/api/pedidos?first=0')
+      .get('/api/empresas?first=0')
       .set('Authorization', `Bearer ${token}`)
       .expect(400);
   });
