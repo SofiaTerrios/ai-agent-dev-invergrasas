@@ -31,9 +31,12 @@ import ClienteBuscador from "./ClienteBuscador";
 import ClienteForm from "./ClienteForm";
 import SedesPanel from "./SedesPanel";
 import ContactosPanel from "./ContactosPanel";
+import MovimientosLista from "@/components/dashboard/entregas/MovimientosLista";
+import ExportarExcel from "@/components/dashboard/entregas/ExportarExcel";
+import EnvasesCliente from "@/components/dashboard/inventario/EnvasesCliente";
 
 type Vista = { tipo: "lista" } | { tipo: "nuevo" } | { tipo: "detalle"; cliente: Cliente };
-type Pestana = "datos" | "sedes" | "contactos";
+type Pestana = "datos" | "sedes" | "contactos" | "historial" | "envases";
 
 const TIPO_LABEL = Object.fromEntries(TIPOS_EMPRESA.map((t) => [t.value, t.label])) as Record<
   TipoEmpresa,
@@ -245,12 +248,14 @@ export default function ClientesModule() {
                 </div>
               </div>
 
-              <div role="tablist" className="flex gap-1 border-b border-[#DDE8E2]">
+              <div role="tablist" className="flex gap-1 overflow-x-auto border-b border-[#DDE8E2]">
                 {(
                   [
                     ["datos", "Datos"],
                     ["sedes", `Sedes (${vista.cliente.sedes.length})`],
                     ["contactos", `Contactos (${vista.cliente.contactos.length})`],
+                    ...(puede(rol, "movimientos", "leer") ? ([["historial", "Historial"]] as const) : []),
+                    ...(puede(rol, "inventario", "leer") ? ([["envases", "Envases"]] as const) : []),
                   ] as const
                 ).map(([id, label]) => (
                   <button
@@ -259,7 +264,7 @@ export default function ClientesModule() {
                     type="button"
                     aria-selected={pestana === id}
                     onClick={() => setPestana(id)}
-                    className={`-mb-px border-b-2 px-4 py-2 text-sm font-semibold ${
+                    className={`-mb-px whitespace-nowrap border-b-2 px-4 py-2 text-sm font-semibold ${
                       pestana === id ? "border-[#0F6E2E] text-[#0F6E2E]" : "border-transparent text-[#6B7F75]"
                     }`}
                   >
@@ -291,6 +296,15 @@ export default function ClientesModule() {
                   onCambio={() => void recargar(vista.cliente.id)}
                 />
               )}
+              {pestana === "historial" && (
+                <div className="space-y-3">
+                  {puede(rol, "informes", "exportar") && (
+                    <ExportarExcel filtros={{ clienteId: vista.cliente.id }} token={token} />
+                  )}
+                  <MovimientosLista filtros={{ clienteId: vista.cliente.id }} token={token} rol={rol} />
+                </div>
+              )}
+              {pestana === "envases" && <EnvasesCliente clienteId={vista.cliente.id} token={token} />}
               {pestana === "contactos" && (
                 <ContactosPanel
                   cliente={vista.cliente}

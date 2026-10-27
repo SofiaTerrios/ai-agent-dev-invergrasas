@@ -48,9 +48,20 @@ const PERMISOS = {
     leer: TODOS,
     escribir: ["admin"],
   },
-  pedidos: {
-    leer: TODOS,
-    escribir: ["admin", "comercial", "empleado"],
+  movimientos: {
+    leer: ["admin", "comercial", "entrega", "empleado"],
+    verTodos: ["admin", "comercial", "empleado"],
+    crear: ["admin", "entrega"],
+    elegirConductor: ["admin"],
+    anular: [],
+    configurarTextos: [],
+  },
+  inventario: {
+    leer: ["admin", "comercial", "entrega", "empleado"],
+    ajustar: [],
+  },
+  informes: {
+    exportar: ["admin", "comercial"],
   },
   certificados: {
     leer: ["admin", "calidad", "comercial"],
