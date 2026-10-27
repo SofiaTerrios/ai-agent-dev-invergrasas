@@ -13,11 +13,13 @@ const TODOS = [
  * the business confirms the final matrix; documented in docs/PERMISOS.md.
  *
  * - super_admin: everything, always (not listed: `puede` lets it through).
- * - admin: every empresa; edits empresas, clientes and pedidos; certificados.
- * - comercial: clientes and pedidos; reads certificados.
+ * - admin: every empresa; edits empresas and clientes; certificados; issues
+ *   entregas choosing the conductor.
+ * - comercial: clientes; reads certificados, entregas and inventario.
  * - calidad: certificados; reads the rest.
- * - entrega: reads clientes; will create entregas/recolecciones (IG-39).
- * - empleado: legacy role, kept until pedidos become entregas (IG-39).
+ * - entrega: issues entregas/recolecciones in their own name and sees only
+ *   theirs; creates contactos.
+ * - empleado: legacy role (read access), pending a business decision.
  *
  * Empresa-scoped data is also limited to the empresas linked to the user
  * (UserEmpresa), except for roles in `empresas.accesoTotal`.
@@ -55,9 +57,24 @@ export const PERMISOS = {
     leer: TODOS,
     escribir: [Role.admin],
   },
-  pedidos: {
-    leer: TODOS,
-    escribir: [Role.admin, Role.comercial, Role.empleado],
+  // Entregas y recolecciones (IG-39). Roles without `verTodos` only see
+  // the ones they delivered.
+  movimientos: {
+    leer: [Role.admin, Role.comercial, Role.entrega, Role.empleado],
+    verTodos: [Role.admin, Role.comercial, Role.empleado],
+    crear: [Role.admin, Role.entrega],
+    // Issue in the name of another conductor (entrega users use their own)
+    elegirConductor: [Role.admin],
+    anular: [],
+    configurarTextos: [],
+  },
+  inventario: {
+    leer: [Role.admin, Role.comercial, Role.entrega, Role.empleado],
+    // Opening balance of envases already at the clientes
+    ajustar: [],
+  },
+  informes: {
+    exportar: [Role.admin, Role.comercial],
   },
   certificados: {
     leer: [Role.admin, Role.calidad, Role.comercial],

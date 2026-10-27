@@ -34,7 +34,7 @@ export async function createE2EApp() {
 
 export async function resetDatabase(prisma: PrismaService) {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE TABLE configuracion, audit_logs, parametros_analisis, certificados_analisis, pedidos, vehiculos, contactos, sedes, clientes, user_empresas, empresas, users CASCADE',
+    'TRUNCATE TABLE configuracion, audit_logs, parametros_analisis, certificados_analisis, inventario_envases, movimiento_lineas, movimientos, secuencias_movimiento, vehiculos, contactos, sedes, clientes, user_empresas, empresas, users CASCADE',
   );
 }
 

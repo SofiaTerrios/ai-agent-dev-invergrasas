@@ -1,11 +1,5 @@
-import { Field, Float, ID, InputType } from '@nestjs/graphql';
-import {
-  CertificadoTipo,
-  Producto,
-  Role,
-  TipoEmpaque,
-  TipoEmpresa,
-} from './enums';
+import { Field, Float, ID, InputType, Int } from '@nestjs/graphql';
+import { CertificadoTipo, Role, TipoEmpresa, TipoMovimiento } from './enums';
 import {
   IsArray,
   IsBoolean,
@@ -16,6 +10,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsInt,
   IsUUID,
   MaxLength,
   Min,
@@ -475,101 +470,6 @@ export class UpdateContactoInput {
 }
 
 @InputType()
-export class PedidoFiltersInput {
-  @Field(() => ID, { nullable: true })
-  @IsOptional()
-  @IsUUID()
-  empresa_id?: string;
-
-  @Field(() => ID, { nullable: true })
-  @IsOptional()
-  @IsUUID()
-  cliente_id?: string;
-
-  @Field(() => Producto, { nullable: true })
-  @IsOptional()
-  @IsEnum(Producto)
-  producto?: Producto;
-
-  @Field({ nullable: true })
-  @IsOptional()
-  @IsDateString()
-  fecha_inicio?: string;
-
-  @Field({ nullable: true })
-  @IsOptional()
-  @IsDateString()
-  fecha_fin?: string;
-}
-
-@InputType()
-export class CreatePedidoInput {
-  @Field(() => ID)
-  @IsNotEmpty()
-  @IsUUID()
-  empresa_id!: string;
-
-  @Field(() => ID)
-  @IsNotEmpty()
-  @IsUUID()
-  cliente_id!: string;
-
-  @Field(() => Producto)
-  @IsNotEmpty()
-  @IsEnum(Producto)
-  producto!: Producto;
-
-  @Field(() => TipoEmpaque)
-  @IsNotEmpty()
-  @IsEnum(TipoEmpaque)
-  tipo_empaque!: TipoEmpaque;
-
-  @Field(() => Float)
-  @IsNumber()
-  @Min(0)
-  cantidad_kg!: number;
-
-  @Field()
-  @IsNotEmpty()
-  @IsDateString()
-  fecha!: string;
-}
-
-@InputType()
-export class UpdatePedidoInput {
-  @Field(() => ID, { nullable: true })
-  @IsOptional()
-  @IsUUID()
-  empresa_id?: string;
-
-  @Field(() => ID, { nullable: true })
-  @IsOptional()
-  @IsUUID()
-  cliente_id?: string;
-
-  @Field(() => Producto, { nullable: true })
-  @IsOptional()
-  @IsEnum(Producto)
-  producto?: Producto;
-
-  @Field(() => TipoEmpaque, { nullable: true })
-  @IsOptional()
-  @IsEnum(TipoEmpaque)
-  tipo_empaque?: TipoEmpaque;
-
-  @Field(() => Float, { nullable: true })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  cantidad_kg?: number;
-
-  @Field({ nullable: true })
-  @IsOptional()
-  @IsDateString()
-  fecha?: string;
-}
-
-@InputType()
 export class CertificadoParametrosInput {
   @Field()
   @IsString()
@@ -769,4 +669,180 @@ export class UpdateVehiculoInput {
   @IsOptional()
   @IsString()
   descripcion?: string | null;
+}
+
+// ── Entregas y recolecciones (IG-39) ────────────────────────────────────────
+
+@InputType()
+export class MovimientoLineaInput {
+  @Field(() => ID, {
+    nullable: true,
+    description: 'Producto entregado; vacío en líneas de solo recolección',
+  })
+  @IsOptional()
+  @IsUUID()
+  producto_id?: string | null;
+
+  @Field(() => String, { nullable: true, description: 'kg, galón o litro' })
+  @IsOptional()
+  @IsString()
+  unidad_medida?: string | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'Cantidad entregada; acepta coma o punto decimal',
+  })
+  @IsOptional()
+  @IsString()
+  cantidad?: string | null;
+
+  @Field(() => ID)
+  @IsUUID()
+  tipo_empaque_id!: string;
+
+  @Field(() => Int, {
+    nullable: true,
+    description: 'Envases llenos entregados',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  cantidad_envases?: number;
+
+  @Field(() => Int, { nullable: true })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  vacios_recibidos?: number;
+
+  @Field(() => Int, { nullable: true })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  vacios_entregados?: number;
+}
+
+// Sede data that can be corrected only for this certificado
+@InputType()
+export class SedeDatosMovimientoInput {
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  actividad?: string | null;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  direccion?: string | null;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  telefono?: string | null;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  barrio?: string | null;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  localidad?: string | null;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  email?: string | null;
+}
+
+@InputType()
+export class CreateMovimientoInput {
+  @Field(() => ID)
+  @IsUUID()
+  empresa_id!: string;
+
+  @Field(() => TipoMovimiento)
+  @IsEnum(TipoMovimiento)
+  tipo!: TipoMovimiento;
+
+  @Field({ description: 'YYYY-MM-DD; no puede ser futura' })
+  @IsDateString()
+  fecha!: string;
+
+  @Field(() => ID)
+  @IsUUID()
+  cliente_id!: string;
+
+  @Field(() => ID)
+  @IsUUID()
+  sede_id!: string;
+
+  @Field(() => ID, { nullable: true })
+  @IsOptional()
+  @IsUUID()
+  contacto_id?: string | null;
+
+  @Field(() => ID, {
+    nullable: true,
+    description: 'Conductor; solo admin elige otro distinto de sí mismo',
+  })
+  @IsOptional()
+  @IsUUID()
+  usuario_entrega_id?: string | null;
+
+  @Field(() => ID, { nullable: true })
+  @IsOptional()
+  @IsUUID()
+  vehiculo_id?: string | null;
+
+  @Field(() => ID, { nullable: true })
+  @IsOptional()
+  @IsUUID()
+  transportador_id?: string | null;
+
+  @Field(() => ID, { nullable: true })
+  @IsOptional()
+  @IsUUID()
+  destino_id?: string | null;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsString()
+  observacion?: string | null;
+
+  @Field(() => SedeDatosMovimientoInput, { nullable: true })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => SedeDatosMovimientoInput)
+  sede_datos?: SedeDatosMovimientoInput | null;
+
+  @Field(() => [MovimientoLineaInput])
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => MovimientoLineaInput)
+  lineas!: MovimientoLineaInput[];
+}
+
+@InputType()
+export class AjusteInventarioInput {
+  @Field(() => ID)
+  @IsUUID()
+  cliente_id!: string;
+
+  @Field(() => ID)
+  @IsUUID()
+  tipo_empaque_id!: string;
+
+  @Field(() => Int, {
+    description:
+      'Positivo: envases que el cliente ya tiene; negativo: corrige a la baja',
+  })
+  @IsInt()
+  cantidad!: number;
+
+  @Field()
+  @IsNotEmpty()
+  @IsString()
+  motivo!: string;
 }
