@@ -48,6 +48,13 @@ Leyenda de estados:
 | IG-20 | Validar el formato del PDF con el negocio | `blocked`: PDFs de muestra listos; falta el visto bueno del negocio |
 | IG-21 | Firmante vinculada a la usuaria Adriana | `in-progress`: implementado; falta crear su usuario con la firma real |
 | IG-22 | Anular y reemitir certificados | `in-progress`: implementado; la propuesta falta confirmarla con el negocio |
+| IG-27 | Recolección de envases vacíos | `in-progress`: implementado, en revisión |
+| IG-28 | PDF del certificado de entrega/recolección | `in-progress`: implementado; falta el visto bueno del formato y del texto certificador |
+| IG-30 | Anular recibo (solo super admin) | `in-progress`: implementado, en revisión |
+| IG-31 | Inventario de envases por cliente | `in-progress`: implementado; falta cargar el saldo inicial |
+| IG-32 | Historial de entregas y recolecciones por cliente | `in-progress`: implementado, en revisión |
+| IG-33 | Informe en Excel | `in-progress`: implementado, en revisión |
+| IG-39 | Formulario de entrega/recolección | `in-progress`: implementado; reemplaza los pedidos (IG-10/11/12) |
 | IG-26 | Catálogo de productos y tipos de empaque | `in-progress`: implementado, en revisión |
 | IG-35 | Catálogos de ciudades y actividades económicas | `in-progress`: implementado, en revisión |
 | IG-36 | Empresa cliente con datos completos y tipos | `in-progress`: implementado; falta completar NIT/ciudad de los clientes migrados |
@@ -69,4 +76,4 @@ Leyenda de estados:
 
 ## Última actualización
 
-- Fecha: 2026-10-27 (fase 3: datos maestros)
+- Fecha: 2026-10-27 (fase 4: entregas y recolecciones)

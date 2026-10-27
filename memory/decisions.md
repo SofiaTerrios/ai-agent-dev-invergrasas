@@ -74,3 +74,17 @@ Formato de cada entrada: fecha, estado, contexto, decisión y consecuencias.
   - Las ciudades (DIVIPOLA, 1121 municipios) y los catálogos base van en la migración, así cada ambiente los tiene sin un seed aparte. Fuente: paquete npm `divipola` 1.0.3 (MIT); `datos.gov.co` no era accesible.
   - Se eliminó el endpoint REST `/clientes`: el frontend usa GraphQL y mantener los dos con el nuevo modelo duplicaba la lógica.
 - **Consecuencias:** todas las operaciones de clientes respetan la empresa del usuario (antes `clientesByEmpresa` no lo validaba). La copia de los datos de sede y contacto en cada certificado de entrega, el transportador y destino por defecto y el alta rápida de contactos en el formulario se usan en la fase 4 (IG-39).
+
+### DEC-011: Pedidos pasan a movimientos de entrega
+
+- **Fecha:** 2026-10-27 · **Estado:** aceptada · **Jira:** IG-39, IG-27, IG-28, IG-30, IG-31, IG-32, IG-33
+- **Contexto:** IG-39 reemplaza los pedidos (IG-10/11/12) por movimientos de entrega y recolección.
+- **Decisión (negocio, 27-oct):**
+  - `Pedido` se migra a `Movimiento` tipo ENTREGA con consecutivo histórico por empresa y año. Se retiran la tabla, la API y las pantallas de pedidos; `/dashboard/pedidos` redirige a Entregas. Hay un `down.sql` manual.
+  - Recoger más envases de los que el cliente tiene en el inventario se permite, con advertencia en el formulario.
+- **Consecuencias:**
+  - Los pedidos migrados no tenían envases, contacto ni transportador: no afectan el inventario y su PDF se genera al pedirlo.
+  - El consecutivo sale de `secuencias_movimiento` con un UPSERT atómico en la misma transacción que el movimiento, su inventario y su PDF; si algo falla no se guarda nada ni se consume el número.
+  - El conductor debe tener rol entrega, estar asignado a la empresa y tener imagen de firma.
+  - Anular (solo super admin) conserva número y PDF (con marca ANULADO) y saca el movimiento del inventario.
+  - El texto certificador por tipo es configurable por el super admin y queda copiado en cada movimiento; el texto definitivo lo define el negocio.

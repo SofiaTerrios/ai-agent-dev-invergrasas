@@ -11,12 +11,21 @@ Pendiente con el negocio:
 - IG-22: confirmar que anular + reemitir (en vez de editar) es lo que quiere el negocio.
 - Validar la matriz de `docs/PERMISOS.md` y decidir qué pasa con el rol `empleado` y el registro público.
 
-**Fase 3 (datos maestros: IG-35, IG-36, IG-37, IG-38, IG-26, IG-40)** implementada, en revisión. Después del deploy:
+**Fases 1 a 3** mergeadas. **Fase 4 (entregas y recolecciones: IG-39, IG-27, IG-28, IG-30, IG-31, IG-32, IG-33)** implementada, en revisión. Los pedidos se migraron a movimientos ENTREGA (DEC-011).
 
-- Completar NIT, ciudad y dirección de los clientes migrados (salen marcados «Datos incompletos» en Clientes).
-- Crear a Invergrasas como cliente con tipos Transportador y Destino, sus vehículos y el vehículo por defecto de cada conductor.
+Después del deploy:
 
-Siguiente fase: entregas y recolecciones (IG-39, IG-27, IG-28, IG-31, IG-30, IG-32, IG-33). Antes hay que decidir si `Pedido` se migra a `Movimiento` o si conviven, y qué pasa con los pedidos ya registrados.
+- Subir la firma de cada conductor (rol entrega) en Usuarios.
+- Cargar el saldo inicial de envases en los clientes (Inventario → Ajustar saldo).
+- Completar NIT, ciudad y dirección de los clientes migrados, y crear a Invergrasas como Transportador y Destino con sus vehículos.
+
+Pendiente con el negocio:
+
+- IG-28: visto bueno del formato del PDF y del texto certificador de cada tipo (el super admin lo edita en Entregas → Textos del certificado).
+- IG-20: formato del certificado de análisis.
+- Qué pasa con el rol `empleado` y el registro público.
+
+Siguiente fase: cierre (IG-42 dashboard con métricas reales; IG-41 liquidación, solo si el negocio la confirma).
 
 ## Despliegue
 
