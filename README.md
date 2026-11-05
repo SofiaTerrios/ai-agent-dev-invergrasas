@@ -3,7 +3,7 @@
 Sitio público y plataforma interna de operaciones de Invergrasas, productora de oleína de palma, RBD y aceites refinados. Incluye:
 
 - **Landing pública:** presentación de la empresa y sus productos.
-- **Dashboard interno:** empresas, clientes, pedidos/entregas y generación de certificados de análisis en PDF, con roles (super_admin, admin, comercial, calidad, entrega, empleado) y datos separados por empresa.
+- **Dashboard interno:** empresas, clientes, entregas y recolecciones con su certificado PDF, inventario de envases, informes en Excel y certificados de análisis en PDF, con roles (super_admin, admin, comercial, calidad, entrega, empleado) y datos separados por empresa.
 
 Seguimiento de tareas en Jira (proyecto **IG**). Estado y próximos pasos en `docs/ROADMAP.md` y `NEXT_TASK.md`.
 

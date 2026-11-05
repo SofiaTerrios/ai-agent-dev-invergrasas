@@ -13,6 +13,7 @@ import {
   Users,
   UserCog,
   Boxes,
+  Package,
   LogOut,
   X,
 } from "lucide-react";
@@ -41,7 +42,18 @@ const navGroups: NavGroup[] = [
   {
     title: "Operaciones",
     items: [
-      { href: "/dashboard/pedidos", label: "Pedidos", icon: Truck },
+      {
+        href: "/dashboard/entregas",
+        label: "Entregas",
+        icon: Truck,
+        visible: (rol) => puede(rol, "movimientos", "leer"),
+      },
+      {
+        href: "/dashboard/inventario",
+        label: "Inventario",
+        icon: Package,
+        visible: (rol) => puede(rol, "inventario", "leer"),
+      },
       {
         href: "/dashboard/certificados",
         label: "Certificados",

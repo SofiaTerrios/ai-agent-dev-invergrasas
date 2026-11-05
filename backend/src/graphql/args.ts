@@ -1,5 +1,4 @@
 import { ArgsType, Field, ID } from '@nestjs/graphql';
-import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDateString,
@@ -7,11 +6,9 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  ValidateNested,
 } from 'class-validator';
 import { PaginationArgs } from '../common/pagination';
-import { PedidoFiltersInput } from './inputs';
-import { CertificadoTipo, TipoEmpresa } from './enums';
+import { CertificadoTipo, TipoEmpresa, TipoMovimiento } from './enums';
 
 // Arguments of paginated queries. They extend PaginationArgs because the
 // global ValidationPipe validates all field arguments against a single class.
@@ -22,15 +19,6 @@ export class ClientesByEmpresaArgs extends PaginationArgs {
   @IsNotEmpty()
   @IsString()
   empresaId!: string;
-}
-
-@ArgsType()
-export class PedidosArgs extends PaginationArgs {
-  @Field(() => PedidoFiltersInput, { nullable: true })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => PedidoFiltersInput)
-  filters?: PedidoFiltersInput;
 }
 
 @ArgsType()
@@ -85,4 +73,37 @@ export class ClientesArgs extends PaginationArgs {
   @IsOptional()
   @IsEnum(TipoEmpresa)
   tipo?: TipoEmpresa;
+}
+
+@ArgsType()
+export class MovimientosArgs extends PaginationArgs {
+  @Field(() => ID, { nullable: true })
+  @IsOptional()
+  @IsString()
+  empresaId?: string;
+
+  @Field(() => ID, { nullable: true })
+  @IsOptional()
+  @IsString()
+  clienteId?: string;
+
+  @Field(() => TipoMovimiento, { nullable: true })
+  @IsOptional()
+  @IsEnum(TipoMovimiento)
+  tipo?: TipoMovimiento;
+
+  @Field(() => ID, { nullable: true })
+  @IsOptional()
+  @IsString()
+  productoId?: string;
+
+  @Field({ nullable: true, description: 'YYYY-MM-DD' })
+  @IsOptional()
+  @IsDateString()
+  fechaDesde?: string;
+
+  @Field({ nullable: true, description: 'YYYY-MM-DD' })
+  @IsOptional()
+  @IsDateString()
+  fechaHasta?: string;
 }

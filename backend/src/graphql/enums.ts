@@ -8,17 +8,6 @@ export enum Role {
   empleado = 'empleado',
 }
 
-export enum Producto {
-  RBD = 'RBD',
-  Oleina = 'Oleina',
-}
-
-export enum TipoEmpaque {
-  Granel = 'Granel',
-  Caneca = 'Caneca',
-  Balde = 'Balde',
-}
-
 export enum CertificadoTipo {
   oleina = 'oleina',
   rbd = 'rbd',
@@ -30,4 +19,11 @@ export enum TipoEmpresa {
   TRANSPORTADOR = 'TRANSPORTADOR',
   DESTINO = 'DESTINO',
   GESTOR = 'GESTOR',
+}
+
+// Mirrors the Prisma `TipoMovimiento` enum (IG-39)
+export enum TipoMovimiento {
+  ENTREGA = 'ENTREGA',
+  RECOLECCION = 'RECOLECCION',
+  ENTREGA_Y_RECOLECCION = 'ENTREGA_Y_RECOLECCION',
 }

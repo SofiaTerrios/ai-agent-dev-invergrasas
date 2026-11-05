@@ -8,13 +8,15 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { EmpresasModule } from './empresas/empresas.module';
 import { ClientesModule } from './clientes/clientes.module';
-import { PedidosModule } from './pedidos/pedidos.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { CertificadosModule } from './certificados/certificados.module';
 import { AuditoriaModule } from './auditoria/auditoria.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { CatalogosModule } from './catalogos/catalogos.module';
 import { VehiculosModule } from './vehiculos/vehiculos.module';
+import { MovimientosModule } from './movimientos/movimientos.module';
+import { InventarioModule } from './inventario/inventario.module';
+import { InformesModule } from './informes/informes.module';
 
 @Module({
   imports: [
@@ -38,9 +40,11 @@ import { VehiculosModule } from './vehiculos/vehiculos.module';
     CatalogosModule,
     EmpresasModule,
     ClientesModule,
-    PedidosModule,
     CertificadosModule,
     VehiculosModule,
+    MovimientosModule,
+    InventarioModule,
+    InformesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

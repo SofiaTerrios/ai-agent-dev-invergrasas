@@ -10,8 +10,8 @@ La matriz vive en `backend/src/auth/roles.ts` (`PERMISOS`) y se aplica con `@Per
 | `admin` | Administración. Ve todas las empresas, edita empresas, clientes y pedidos, y genera certificados. |
 | `comercial` | Clientes y pedidos de sus empresas; ve y descarga certificados. |
 | `calidad` | Genera y ve certificados de sus empresas. |
-| `entrega` | Trabajadores que entregan el producto y recogen envases. Hoy ve clientes; creará entregas/recolecciones con IG-39. |
-| `empleado` | Rol anterior; se mantiene hasta que los pedidos pasen a entregas (IG-39). Es el rol del registro público. |
+| `entrega` | Trabajadores que entregan el producto y recogen envases. Emiten entregas/recolecciones a su nombre (firman con su imagen de firma) y solo ven las suyas. |
+| `empleado` | Rol anterior; hoy solo consulta entregas e inventario. Es el rol del registro público. Falta decidir si se elimina. |
 
 `super_admin` no aparece en la matriz: `puede()` lo deja pasar siempre, también en los filtros por empresa.
 
@@ -32,8 +32,13 @@ La matriz vive en `backend/src/auth/roles.ts` (`PERMISOS`) y se aplica con `@Per
 | catalogos · gestionarProductos (productos, empaques y combinaciones) | ✔ | ✔ | | | | |
 | vehiculos · leer | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
 | vehiculos · escribir (y vehículo por defecto del conductor) | ✔ | ✔ | | | | |
-| pedidos · leer | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
-| pedidos · escribir | ✔ | ✔ | ✔ | | | ✔ |
+| movimientos · leer (entregas y recolecciones) | ✔ | ✔ | ✔ | | ✔ (solo las suyas) | ✔ |
+| movimientos · crear | ✔ | ✔ (elige el conductor) | | | ✔ (a su nombre) | |
+| movimientos · anular | ✔ | | | | | |
+| movimientos · configurarTextos (texto certificador) | ✔ | | | | | |
+| inventario · leer (envases en clientes) | ✔ | ✔ | ✔ | | ✔ | ✔ |
+| inventario · ajustar (saldo inicial) | ✔ | | | | | |
+| informes · exportar (Excel) | ✔ | ✔ | ✔ | | | |
 | certificados · leer | ✔ | ✔ | ✔ | ✔ | | |
 | certificados · escribir | ✔ | ✔ | | ✔ | | |
 | certificados · anular | ✔ | ✔ | | ✔ | | |
@@ -57,7 +62,8 @@ Además de la matriz, los datos de una empresa solo se ven si el usuario está v
 Diferencias con lo implementado y por qué:
 
 - **Empresas "—" para entrega:** se interpreta como "no entra al módulo Empresas". Igual puede listar *sus* empresas (`empresas · leer`), porque el resto de pantallas las necesita para elegir la empresa activa.
-- **Entregas, inventario e informes:** los módulos aún no existen. Se agregan a `PERMISOS` cuando se construyan (IG-39, IG-31, IG-33).
+- **Entregas para admin:** la propuesta dice «Ver», pero IG-39 pide que admin y super admin puedan emitir eligiendo el conductor. Se siguió IG-39.
+- **Pedidos:** desaparecen; los registrados se migraron a movimientos ENTREGA (DEC-011).
 - **Clientes para calidad y entrega:** «Ver» en la propuesta. Ven clientes, sedes y contactos de sus empresas; `entrega` además crea contactos (IG-38, para el alta rápida durante la entrega).
 - **Pedidos:** no están en la propuesta porque IG-39 los reemplaza por entregas. Mientras tanto mantienen los permisos que tenían.
 - **`empleado`:** no está en la propuesta. Falta decidir si los empleados existentes pasan a `entrega` u otro rol y si se elimina.

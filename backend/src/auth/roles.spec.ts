@@ -14,7 +14,10 @@ const CASOS: [Role, Parameters<typeof puede>[1], string, boolean][] = [
   [Role.calidad, 'clientes', 'escribir', false],
   [Role.entrega, 'clientes', 'leer', true],
   [Role.entrega, 'certificados', 'leer', false],
-  [Role.empleado, 'pedidos', 'escribir', true],
+  [Role.empleado, 'movimientos', 'leer', true],
+  [Role.entrega, 'movimientos', 'crear', true],
+  [Role.comercial, 'movimientos', 'crear', false],
+  [Role.admin, 'movimientos', 'anular', false],
   [Role.empleado, 'empresas', 'editar', false],
 ];
 
