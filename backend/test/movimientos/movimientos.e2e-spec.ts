@@ -639,4 +639,133 @@ describe('Movimientos E2E - entregas, recolecciones e inventario', () => {
       .set('Authorization', `Bearer ${t.pedro}`)
       .expect(403);
   });
+
+  describe('dashboard (IG-42)', () => {
+    const DASHBOARD = `query($empresaId: ID, $desde: String, $hasta: String) {
+      dashboardResumen(empresaId: $empresaId, desde: $desde, hasta: $hasta) {
+        desde hasta anterior_desde anterior_hasta
+        kg_entregados { actual anterior }
+        movimientos { actual anterior entregas recolecciones }
+        certificados { actual anterior }
+        envases { total por_tipo { nombre cantidad } }
+        serie_envases { mes entregados recogidos }
+        top_clientes_envases { cliente { razon_social } total }
+      }
+    }`;
+    type Resumen = {
+      desde: string;
+      anterior_desde: string;
+      anterior_hasta: string;
+      kg_entregados: { actual: number; anterior: number } | null;
+      movimientos: {
+        actual: number;
+        entregas: number;
+        recolecciones: number;
+      } | null;
+      certificados: { actual: number } | null;
+      envases: { total: number } | null;
+      serie_envases: { mes: string; recogidos: number }[] | null;
+      top_clientes_envases: { cliente: { razon_social: string } }[] | null;
+    };
+    const octubre = () => ({
+      empresaId,
+      desde: '2026-10-01',
+      hasta: '2026-10-31',
+    });
+    const resumen = async (token: string, vars: Record<string, unknown>) => {
+      const res = await gql<{ dashboardResumen: Resumen }>(
+        app,
+        token,
+        DASHBOARD,
+        vars,
+      );
+      expect(res.errors).toBeUndefined();
+      return res.data.dashboardResumen;
+    };
+    // Same rules as the history and the Excel: this empresa, not annulled
+    const vigentes = (extra: Record<string, unknown> = {}) => ({
+      empresa_id: empresaId,
+      anulado_at: null,
+      fecha: { gte: new Date('2026-10-01'), lte: new Date('2026-10-31') },
+      ...extra,
+    });
+
+    it('matches the history totals and skips annulled movimientos', async () => {
+      const r = await resumen(t.comercial, octubre());
+      const kg = await prisma.movimientoLinea.aggregate({
+        _sum: { cantidad: true },
+        where: { unidad_medida: 'kg', movimiento: vigentes() },
+      });
+      const recogidos = await prisma.movimientoLinea.aggregate({
+        _sum: { vacios_recibidos: true },
+        where: { movimiento: vigentes() },
+      });
+      expect(
+        await prisma.movimiento.count({
+          where: { empresa_id: empresaId, anulado_at: { not: null } },
+        }),
+      ).toBeGreaterThan(0);
+
+      expect(r.anterior_desde).toBe('2026-09-01');
+      expect(r.anterior_hasta).toBe('2026-09-30');
+      expect(r.kg_entregados!.actual).toBeCloseTo(
+        kg._sum.cantidad!.toNumber(),
+        2,
+      );
+      expect(r.kg_entregados!.anterior).toBe(0);
+      expect(r.movimientos!.actual).toBe(
+        await prisma.movimiento.count({ where: vigentes() }),
+      );
+      expect(r.movimientos!.recolecciones).toBe(
+        await prisma.movimiento.count({
+          where: vigentes({ tipo: { not: 'ENTREGA' } }),
+        }),
+      );
+      expect(r.serie_envases!.find((m) => m.mes === '2026-10')!.recogidos).toBe(
+        recogidos._sum.vacios_recibidos,
+      );
+      expect(r.serie_envases).toHaveLength(12);
+      expect(r.top_clientes_envases![0].cliente.razon_social).toBe(
+        'Panadería La Espiga',
+      );
+    });
+
+    it('shows entrega only their own movimientos and no certificados', async () => {
+      const pedro = await resumen(t.pedro, octubre());
+      const comercial = await resumen(t.comercial, octubre());
+      expect(pedro.movimientos!.actual).toBe(
+        await prisma.movimiento.count({
+          where: vigentes({ usuario_entrega_id: pedroId }),
+        }),
+      );
+      expect(pedro.movimientos!.actual).toBeLessThan(
+        comercial.movimientos!.actual,
+      );
+      expect(pedro.certificados).toBeNull();
+      expect(comercial.certificados).not.toBeNull();
+    });
+
+    it('leaves out the sections the role cannot read', async () => {
+      const calidad = await resumen(t.calidad, octubre());
+      expect(calidad.movimientos).toBeNull();
+      expect(calidad.kg_entregados).toBeNull();
+      expect(calidad.envases).toBeNull();
+      expect(calidad.certificados).not.toBeNull();
+    });
+
+    it('rejects other empresas and inverted ranges', async () => {
+      const otra = (await createEmpresa(prisma)).id;
+      const ajena = await gql(app, t.comercial, DASHBOARD, {
+        empresaId: otra,
+      });
+      expect(ajena.errors?.[0]?.extensions?.code).toBe('FORBIDDEN');
+      const invertido = await gql(app, t.comercial, DASHBOARD, {
+        desde: '2026-10-31',
+        hasta: '2026-10-01',
+      });
+      expect(invertido.errors?.[0]?.message).toBe(
+        'La fecha inicial es posterior a la final',
+      );
+    });
+  });
 });

@@ -728,6 +728,126 @@ export class TextoCertificadorModel {
   texto!: string;
 }
 
+// ── Dashboard (IG-42) ──────────────────────────────────────────────────────
+
+@ObjectType()
+export class ComparacionModel {
+  @Field(() => Float, { description: 'Período actual' })
+  actual!: number;
+
+  @Field(() => Float, { description: 'Período anterior' })
+  anterior!: number;
+}
+
+@ObjectType()
+export class MovimientosKpiModel {
+  @Field(() => Int)
+  actual!: number;
+
+  @Field(() => Int)
+  anterior!: number;
+
+  @Field(() => Int, { description: 'Con entrega (incluye las mixtas)' })
+  entregas!: number;
+
+  @Field(() => Int, { description: 'Con recolección (incluye las mixtas)' })
+  recolecciones!: number;
+}
+
+@ObjectType()
+export class EnvaseCantidadModel {
+  @Field()
+  nombre!: string;
+
+  @Field(() => Int)
+  cantidad!: number;
+}
+
+@ObjectType()
+export class EnvasesKpiModel {
+  @Field(() => Int, { description: 'Envases retornables en poder de clientes' })
+  total!: number;
+
+  @Field(() => [EnvaseCantidadModel])
+  por_tipo!: EnvaseCantidadModel[];
+}
+
+@ObjectType()
+export class SerieKgModel {
+  @Field({ description: 'YYYY-MM' })
+  mes!: string;
+
+  @Field()
+  producto!: string;
+
+  @Field(() => Float)
+  kg!: number;
+}
+
+@ObjectType()
+export class SerieEnvasesModel {
+  @Field({ description: 'YYYY-MM' })
+  mes!: string;
+
+  @Field(() => Int, { description: 'Llenos y vacíos dejados en clientes' })
+  entregados!: number;
+
+  @Field(() => Int, { description: 'Vacíos recogidos' })
+  recogidos!: number;
+}
+
+@ObjectType()
+export class TopClienteEnvasesModel {
+  @Field(() => ClienteResumenModel)
+  cliente!: ClienteResumenModel;
+
+  @Field(() => Int)
+  total!: number;
+
+  @Field({ description: 'Ej.: 10 caneca · 4 galón' })
+  detalle!: string;
+}
+
+// Sections the role cannot see are null
+@ObjectType()
+export class DashboardResumenModel {
+  @Field()
+  desde!: string;
+
+  @Field()
+  hasta!: string;
+
+  @Field()
+  anterior_desde!: string;
+
+  @Field()
+  anterior_hasta!: string;
+
+  @Field(() => ComparacionModel, {
+    nullable: true,
+    description: 'Líneas en kg',
+  })
+  kg_entregados?: ComparacionModel | null;
+
+  @Field(() => MovimientosKpiModel, { nullable: true })
+  movimientos?: MovimientosKpiModel | null;
+
+  @Field(() => ComparacionModel, { nullable: true })
+  certificados?: ComparacionModel | null;
+
+  @Field(() => EnvasesKpiModel, { nullable: true })
+  envases?: EnvasesKpiModel | null;
+
+  @Field(() => [SerieKgModel], { nullable: true, description: '12 meses' })
+  serie_kg?: SerieKgModel[] | null;
+
+  @Field(() => [SerieEnvasesModel], { nullable: true, description: '12 meses' })
+  serie_envases?: SerieEnvasesModel[] | null;
+
+  @Field(() => [TopClienteEnvasesModel], { nullable: true })
+  top_clientes_envases?: TopClienteEnvasesModel[] | null;
+}
+
 @ObjectType()
 export class EmpresaConnection extends ConnectionType(
   EmpresaModel,

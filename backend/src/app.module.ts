@@ -17,6 +17,7 @@ import { VehiculosModule } from './vehiculos/vehiculos.module';
 import { MovimientosModule } from './movimientos/movimientos.module';
 import { InventarioModule } from './inventario/inventario.module';
 import { InformesModule } from './informes/informes.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { InformesModule } from './informes/informes.module';
     MovimientosModule,
     InventarioModule,
     InformesModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],
