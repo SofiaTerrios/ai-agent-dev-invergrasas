@@ -1,11 +1,30 @@
+"use client";
+
+import { usePathname } from "next/navigation";
 import { rolLabel } from "@/lib/permisos";
+import { getUserInitials, type SessionUser } from "@/lib/session";
+
+// Title of each section, by route prefix (longest first)
+const SECCIONES: [string, string][] = [
+  ["/dashboard/entregas/nueva", "Nueva entrega o recolección"],
+  ["/dashboard/entregas", "Entregas y recolecciones"],
+  ["/dashboard/certificados/nuevo", "Nuevo certificado de análisis"],
+  ["/dashboard/certificados", "Certificados de análisis"],
+  ["/dashboard/inventario", "Inventario de envases"],
+  ["/dashboard/clientes", "Clientes"],
+  ["/dashboard/catalogos", "Productos y catálogos"],
+  ["/dashboard/empresas", "Empresas"],
+  ["/dashboard/usuarios", "Usuarios"],
+];
+
+const seccion = (pathname: string) =>
+  SECCIONES.find(([ruta]) => pathname === ruta || pathname.startsWith(`${ruta}/`))?.[1] ?? "Inicio";
 
 type HeaderProps = {
   onOpenSidebar: () => void;
   sidebarCollapsed: boolean;
   onToggleSidebar: () => void;
-  userRole?: string;
-  notificationCount?: number;
+  user?: SessionUser;
 };
 
 function formatToday() {
@@ -17,18 +36,13 @@ function formatToday() {
   return date.charAt(0).toUpperCase() + date.slice(1);
 }
 
-function getRoleInitials(role: string) {
-  return role.slice(0, 2).toUpperCase();
-}
-
 export default function Header({
   onOpenSidebar,
   sidebarCollapsed,
   onToggleSidebar,
-  userRole = "usuario",
-  notificationCount = 0,
+  user,
 }: HeaderProps) {
-  const roleLabel = rolLabel(userRole);
+  const pathname = usePathname();
 
   return (
     <header className="sticky top-0 z-30 border-b border-[#DDE8E2] bg-white">
@@ -66,22 +80,14 @@ export default function Header({
           {/* Title block */}
           <div>
             <p className="text-[10px] uppercase tracking-[0.18em] text-[#9AADA5]">
-              Panel operativo
+              Invergrasas
             </p>
-            <h1 className="text-base font-medium text-[#17251F]">
-              Dashboard
-            </h1>
+            <p className="text-base font-medium text-[#17251F]">{seccion(pathname)}</p>
           </div>
         </div>
 
-        {/* Right: status · date · notifications · user */}
+        {/* Right: date · user */}
         <div className="flex items-center gap-3">
-          {/* Online status */}
-          <div className="hidden items-center gap-1.5 text-xs text-[#9AADA5] sm:flex">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            En línea
-          </div>
-
           {/* Date chip */}
           <div className="hidden items-center gap-1.5 rounded-md border border-[#DDE8E2] bg-[#F7FAF8] px-2.5 py-1.5 text-xs text-[#63766D] sm:flex">
             <svg
@@ -98,33 +104,16 @@ export default function Header({
             {formatToday()}
           </div>
 
-          {/* Notifications */}
-          <button
-            type="button"
-            aria-label={`Notificaciones${
-              notificationCount > 0 ? ` (${notificationCount})` : ""
-            }`}
-            className="relative inline-flex h-9 w-9 items-center justify-center rounded-md border border-[#DDE8E2] text-[#6B7F75] transition-colors hover:bg-[#F1F6F3]"
-          >
-            🔔
-            {notificationCount > 0 && (
-              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
-            )}
-          </button>
-
-          {/* User pill */}
-          <button
-            type="button"
-            aria-label="Menú de usuario"
-            className="flex items-center gap-2 rounded-full border border-[#D5E1DB] bg-[#F1F6F3] py-1 pl-1 pr-3 transition-colors hover:bg-[#E6EEE9]"
-          >
+          {/* User */}
+          <div className="flex items-center gap-2 rounded-full border border-[#D5E1DB] bg-[#F1F6F3] py-1 pl-1 pr-3">
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#085041] text-[11px] font-medium text-[#9FE1CB]">
-              {getRoleInitials(userRole)}
+              {getUserInitials(user)}
             </span>
-            <span className="text-xs font-medium text-[#17251F]">
-              {roleLabel}
+            <span className="hidden text-xs leading-tight sm:block">
+              <span className="block font-medium text-[#17251F]">{user?.nombre || user?.email}</span>
+              <span className="block text-[#63766D]">{rolLabel(user?.rol)}</span>
             </span>
-          </button>
+          </div>
         </div>
       </div>
     </header>

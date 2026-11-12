@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/dashboard/Header";
 import Sidebar from "@/components/dashboard/Sidebar";
-import { getSession, type SessionUser } from "@/lib/session";
+import { useSession, type SessionUser } from "@/lib/session";
 
 type DashboardLayoutProps = {
   children: ReactNode;
@@ -14,13 +14,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [session] = useState(() =>
-    typeof window === "undefined" ? null : getSession(),
-  );
+  const session = useSession();
   const user: SessionUser | undefined = session?.user;
 
   useEffect(() => {
-    if (!session) {
+    // undefined: not read yet (hydration); null: logged out
+    if (session === undefined) return;
+    if (session === null) {
       router.replace("/login");
       return;
     }
@@ -68,9 +68,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           onOpenSidebar={() => setSidebarOpen(true)}
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={() => setSidebarCollapsed((current) => !current)}
-          userRole={user?.rol}
+          user={user}
         />
         <main className="px-4 py-8 md:px-8">{children}</main>
+        <footer className="border-t border-[#DDE8E2] px-4 py-5 text-xs leading-relaxed text-[#7D8E86] md:px-8">
+          <span className="font-semibold text-[#486358]">INVERGRASAS S.A.S.</span> · NIT 901.684.306-1 · CRA 78 # 41B - 20 SUR ·{" "}
+          <a href="mailto:invergrasas@gmail.com" className="hover:underline">
+            invergrasas@gmail.com
+          </a>{" "}
+          ·{" "}
+          <a href="tel:+573124325472" className="hover:underline">
+            312 432 5472
+          </a>
+        </footer>
       </div>
     </div>
   );

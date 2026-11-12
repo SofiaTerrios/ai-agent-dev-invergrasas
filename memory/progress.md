@@ -55,6 +55,7 @@ Leyenda de estados:
 | IG-32 | Historial de entregas y recolecciones por cliente | `in-progress`: implementado, en revisión |
 | IG-33 | Informe en Excel | `in-progress`: implementado, en revisión |
 | IG-39 | Formulario de entrega/recolección | `in-progress`: implementado; reemplaza los pedidos (IG-10/11/12) |
+| IG-42 | Dashboard con métricas reales | `in-progress`: implementado, en revisión (DEC-012) |
 | IG-26 | Catálogo de productos y tipos de empaque | `in-progress`: implementado, en revisión |
 | IG-35 | Catálogos de ciudades y actividades económicas | `in-progress`: implementado, en revisión |
 | IG-36 | Empresa cliente con datos completos y tipos | `in-progress`: implementado; falta completar NIT/ciudad de los clientes migrados |
@@ -76,4 +77,4 @@ Leyenda de estados:
 
 ## Última actualización
 
-- Fecha: 2026-10-27 (fase 4: entregas y recolecciones)
+- Fecha: 2026-11-12 (IG-42: dashboard con métricas reales y branding)

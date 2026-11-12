@@ -88,3 +88,16 @@ Formato de cada entrada: fecha, estado, contexto, decisión y consecuencias.
   - El conductor debe tener rol entrega, estar asignado a la empresa y tener imagen de firma.
   - Anular (solo super admin) conserva número y PDF (con marca ANULADO) y saca el movimiento del inventario.
   - El texto certificador por tipo es configurable por el super admin y queda copiado en cada movimiento; el texto definitivo lo define el negocio.
+
+### DEC-012: Dashboard con métricas reales
+
+- **Fecha:** 2026-11-12 · **Estado:** propuesta · **Jira:** IG-42
+- **Contexto:** el inicio mostraba cifras de ejemplo de la plantilla.
+- **Decisión:**
+  - Una consulta `dashboardResumen` agrega en SQL con las mismas reglas del historial y del Excel: solo las empresas del usuario, sin movimientos ni certificados anulados, y el rol entrega solo ve lo suyo. Las secciones que el rol no puede leer vuelven en `null` y no se muestran.
+  - Período por defecto: el mes en curso, comparado con los mismos días del mes anterior. «Año en curso» se compara con los mismos días del año anterior; otros rangos, con el mismo número de días justo antes.
+  - «Kg entregados» suma solo las líneas registradas en kg: no hay densidad para convertir galones o litros de oleína. Se indica en la tarjeta y en la gráfica.
+  - Los envases en clientes son el saldo de hoy, no dependen del período.
+  - Gráficas en SVG propio (sin librería): columnas apiladas de kg por producto y agrupadas de envases entregados y recogidos, 12 meses, con leyenda, tooltip y vista de tabla.
+  - Menú con los nombres del SDD (Inicio, Entregas y recolecciones, Certificados de análisis, ...), pie con los datos de la empresa y sin la campana ni el estado «En línea» de la plantilla.
+- **Consecuencias:** si el negocio quiere los kg de oleína en galones convertidos, hace falta una densidad por producto. La página «Informes» del SDD no se creó: el Excel se exporta desde Entregas con los mismos filtros.

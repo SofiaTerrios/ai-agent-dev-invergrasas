@@ -56,7 +56,7 @@ cd backend
 npx eslint "{src,test}/**/*.ts"
 npx tsc --noEmit
 npm test                         # unitarios
-npm run test:e2e -- --runInBand  # e2e: requiere DATABASE_URL a una BD desechable
+npm run test:e2e -- --runInBand  # e2e: BORRA las tablas; usa una BD aparte, p. ej. DATABASE_URL=postgresql://…/invergrasas_e2e
 
 # Frontend
 cd frontend

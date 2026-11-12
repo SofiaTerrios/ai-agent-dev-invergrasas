@@ -36,41 +36,35 @@ const navGroups: NavGroup[] = [
   {
     title: "Visión general",
     items: [
-      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
     ],
   },
   {
-    title: "Operaciones",
+    title: "Operación",
     items: [
       {
         href: "/dashboard/entregas",
-        label: "Entregas",
+        label: "Entregas y recolecciones",
         icon: Truck,
         visible: (rol) => puede(rol, "movimientos", "leer"),
       },
       {
-        href: "/dashboard/inventario",
-        label: "Inventario",
-        icon: Package,
-        visible: (rol) => puede(rol, "inventario", "leer"),
-      },
-      {
         href: "/dashboard/certificados",
-        label: "Certificados",
+        label: "Certificados de análisis",
         icon: FileBadge,
         visible: (rol) => puede(rol, "certificados", "leer"),
+      },
+      {
+        href: "/dashboard/inventario",
+        label: "Inventario de envases",
+        icon: Package,
+        visible: (rol) => puede(rol, "inventario", "leer"),
       },
     ],
   },
   {
     title: "Administración",
     items: [
-      {
-        href: "/dashboard/empresas",
-        label: "Empresas",
-        icon: Building2,
-        visible: (rol) => puede(rol, "empresas", "editar"),
-      },
       {
         href: "/dashboard/clientes",
         label: "Clientes",
@@ -79,12 +73,18 @@ const navGroups: NavGroup[] = [
       },
       {
         href: "/dashboard/catalogos",
-        label: "Catálogos",
+        label: "Productos y catálogos",
         icon: Boxes,
         visible: (rol) =>
           puede(rol, "catalogos", "gestionarProductos") ||
           puede(rol, "catalogos", "gestionarActividades") ||
           puede(rol, "vehiculos", "escribir"),
+      },
+      {
+        href: "/dashboard/empresas",
+        label: "Empresas",
+        icon: Building2,
+        visible: (rol) => puede(rol, "empresas", "editar"),
       },
       {
         href: "/dashboard/usuarios",
@@ -132,9 +132,10 @@ export default function Sidebar({
           <Image src="/logo.jpg" alt="Invergrasas" width={24} height={24} className="rounded" />
         </div>
         {!isCollapsed && (
-          <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-[#83948D]">
-            Operaciones
-          </p>
+          <div className="min-w-0">
+            <p className="text-sm font-bold tracking-[0.08em] text-[#0F6E2E]">INVERGRASAS</p>
+            <p className="truncate text-[10px] text-[#83948D]">Aceites y grasas para la industria</p>
+          </div>
         )}
       </div>
 
