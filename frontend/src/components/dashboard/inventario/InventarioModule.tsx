@@ -8,7 +8,7 @@ import FormError from "@/components/ui/FormError";
 import Modal from "@/components/ui/Modal";
 import { labelClass, selectClass } from "@/components/ui/formStyles";
 import { fetchAllNodes, graphqlRequest } from "@/lib/graphql";
-import { getSession } from "@/lib/session";
+import { useSession } from "@/lib/session";
 import { getEmpresaActiva } from "@/lib/empresaActiva";
 import { puede } from "@/lib/permisos";
 import { GET_EMPRESAS_QUERY, type Empresa } from "@/graphql/empresas";
@@ -22,7 +22,7 @@ import EnvasesCliente from "./EnvasesCliente";
 // Returnable envases at the clientes (IG-31)
 export default function InventarioModule() {
   const router = useRouter();
-  const [session] = useState(() => (typeof window === "undefined" ? null : getSession()));
+  const session = useSession();
   const token = session?.token;
   const rol = session?.user.rol;
   const puedeLeer = puede(rol, "inventario", "leer");

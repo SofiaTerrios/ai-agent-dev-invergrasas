@@ -13,7 +13,7 @@ import {
   type Connection,
   type PageInfo,
 } from "@/lib/graphql";
-import { getSession } from "@/lib/session";
+import { useSession } from "@/lib/session";
 import { getEmpresaActiva, setEmpresaActiva } from "@/lib/empresaActiva";
 import { puede } from "@/lib/permisos";
 import { GET_EMPRESAS_QUERY, type Empresa } from "@/graphql/empresas";
@@ -67,9 +67,7 @@ function Incompleto() {
 // y administrar sus sedes (IG-37) y contactos (IG-38).
 export default function ClientesModule() {
   const router = useRouter();
-  const [session] = useState(() =>
-    typeof window === "undefined" ? null : getSession(),
-  );
+  const session = useSession();
   const token = session?.token;
   const rol = session?.user.rol;
   const puedeLeer = puede(rol, "clientes", "leer");

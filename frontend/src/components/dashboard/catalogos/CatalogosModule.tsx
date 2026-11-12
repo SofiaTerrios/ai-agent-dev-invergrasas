@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchAllNodes, graphqlRequest } from "@/lib/graphql";
-import { getSession } from "@/lib/session";
+import { useSession } from "@/lib/session";
 import { puede } from "@/lib/permisos";
 import { GET_EMPRESAS_QUERY, type Empresa } from "@/graphql/empresas";
 import {
@@ -26,9 +26,7 @@ type Pestana = "productos" | "actividades" | "vehiculos";
 // Catálogos (IG-35, IG-26) y vehículos (IG-40)
 export default function CatalogosModule() {
   const router = useRouter();
-  const [session] = useState(() =>
-    typeof window === "undefined" ? null : getSession(),
-  );
+  const session = useSession();
   const token = session?.token;
   const rol = session?.user.rol;
   const editaProductos = puede(rol, "catalogos", "gestionarProductos");

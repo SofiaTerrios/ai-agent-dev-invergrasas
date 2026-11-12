@@ -12,7 +12,7 @@ import {
   type Connection,
   type PageInfo,
 } from "@/lib/graphql";
-import { getSession } from "@/lib/session";
+import { useSession } from "@/lib/session";
 import { puede } from "@/lib/permisos";
 import { GET_EMPRESAS_QUERY, type Empresa } from "@/graphql/empresas";
 import {
@@ -65,9 +65,7 @@ function EstadoBadge({ certificado }: { certificado: Certificado }) {
 // Historial de certificados de análisis (IG-18)
 export default function CertificadosHistorial() {
   const router = useRouter();
-  const [session] = useState(() =>
-    typeof window === "undefined" ? null : getSession(),
-  );
+  const session = useSession();
   const token = session?.token;
   const rol = session?.user.rol;
   const puedeLeer = puede(rol, "certificados", "leer");

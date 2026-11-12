@@ -15,7 +15,7 @@ import {
   type PageInfo,
 } from "@/lib/graphql";
 import { GET_EMPRESAS_QUERY, type Empresa } from "@/graphql/empresas";
-import { getSession } from "@/lib/session";
+import { useSession } from "@/lib/session";
 import { puede } from "@/lib/permisos";
 
 export default function EmpresasModule() {
@@ -29,9 +29,7 @@ export default function EmpresasModule() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedEmpresa, setSelectedEmpresa] = useState<Empresa | undefined>();
   const [error, setError] = useState<string>("");
-  const [session] = useState(() =>
-    typeof window === "undefined" ? null : getSession(),
-  );
+  const session = useSession();
   const token = session?.token;
   const user = session?.user;
   const isAdmin = puede(user?.rol, "empresas", "editar");

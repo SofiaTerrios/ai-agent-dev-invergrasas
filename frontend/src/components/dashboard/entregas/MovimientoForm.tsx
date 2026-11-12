@@ -9,7 +9,7 @@ import FormError from "@/components/ui/FormError";
 import { labelClass, selectClass } from "@/components/ui/formStyles";
 import { connectionNodes, fetchAllNodes, graphqlRequest, type Connection } from "@/lib/graphql";
 import { downloadAuthenticatedFile } from "@/lib/api";
-import { getSession } from "@/lib/session";
+import { useSession } from "@/lib/session";
 import { getEmpresaActiva, setEmpresaActiva } from "@/lib/empresaActiva";
 import { puede } from "@/lib/permisos";
 import { GET_EMPRESAS_QUERY, type Empresa } from "@/graphql/empresas";
@@ -91,7 +91,7 @@ const titulo = "text-sm font-bold uppercase tracking-[0.14em] text-[#0F6E2E]";
 // Certificado de entrega y/o recolección (IG-39)
 export default function MovimientoForm() {
   const router = useRouter();
-  const [session] = useState(() => (typeof window === "undefined" ? null : getSession()));
+  const session = useSession();
   const token = session?.token;
   const rol = session?.user.rol;
   const puedeCrear = puede(rol, "movimientos", "crear");

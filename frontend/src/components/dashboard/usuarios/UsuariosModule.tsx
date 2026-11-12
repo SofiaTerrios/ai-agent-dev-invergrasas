@@ -12,7 +12,7 @@ import {
   type Connection,
   type PageInfo,
 } from "@/lib/graphql";
-import { getSession } from "@/lib/session";
+import { useSession } from "@/lib/session";
 import { puede, rolLabel } from "@/lib/permisos";
 import {
   DESACTIVAR_USUARIO_MUTATION,
@@ -46,9 +46,7 @@ function EstadoBadge({ usuario }: { usuario: Usuario }) {
 
 export default function UsuariosModule() {
   const router = useRouter();
-  const [session] = useState(() =>
-    typeof window === "undefined" ? null : getSession(),
-  );
+  const session = useSession();
   const token = session?.token;
   const puedeGestionar = puede(session?.user.rol, "usuarios", "gestionar");
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);

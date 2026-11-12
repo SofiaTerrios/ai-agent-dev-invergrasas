@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import { selectClass } from "@/components/ui/formStyles";
 import { fetchAllNodes, graphqlRequest } from "@/lib/graphql";
-import { getSession } from "@/lib/session";
+import { useSession } from "@/lib/session";
 import { puede } from "@/lib/permisos";
 import { GET_EMPRESAS_QUERY, type Empresa } from "@/graphql/empresas";
 import { GET_PRODUCTOS_QUERY, type ProductoCatalogo } from "@/graphql/catalogos";
@@ -20,7 +20,7 @@ const VACIOS: FiltrosMovimientos = { empresaId: "", tipo: "", productoId: "", fe
 // Entregas y recolecciones: history with filters (IG-32), Excel (IG-33)
 export default function EntregasModule() {
   const router = useRouter();
-  const [session] = useState(() => (typeof window === "undefined" ? null : getSession()));
+  const session = useSession();
   const token = session?.token;
   const rol = session?.user.rol;
   const puedeLeer = puede(rol, "movimientos", "leer");

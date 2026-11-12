@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Button from "@/components/ui/Button";
-import { getSession } from "@/lib/session";
+import { useSession } from "@/lib/session";
 import { puede } from "@/lib/permisos";
 import {
   useCertificadoForm,
@@ -78,9 +78,7 @@ export default function NuevoCertificado() {
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [successData, setSuccessData] = useState<{ id: string; archivo_url: string } | null>(null);
-  const [session] = useState(() =>
-    typeof window === "undefined" ? null : getSession(),
-  );
+  const session = useSession();
   const token = session?.token ?? null;
   const puedeGenerar = puede(session?.user.rol, "certificados", "escribir");
   // undefined while loading
@@ -88,7 +86,7 @@ export default function NuevoCertificado() {
   const [reemplazado, setReemplazado] = useState<CertificadoDetalle | null>(null);
 
   useEffect(() => {
-    if (!session) router.push("/login");
+    if (session === null) router.push("/login");
     else if (!puedeGenerar) router.replace("/dashboard/certificados");
   }, [session, puedeGenerar, router]);
 

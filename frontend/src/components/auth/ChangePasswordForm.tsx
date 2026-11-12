@@ -6,7 +6,7 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import FormError from "@/components/ui/FormError";
 import { graphqlRequest } from "@/lib/graphql";
-import { getSession, updateSessionUser } from "@/lib/session";
+import { useSession, updateSessionUser } from "@/lib/session";
 import { CHANGE_PASSWORD_MUTATION } from "@/graphql/usuarios";
 
 type Values = {
@@ -31,9 +31,7 @@ function validate(values: Values) {
 
 export default function ChangePasswordForm() {
   const router = useRouter();
-  const [session] = useState(() =>
-    typeof window === "undefined" ? null : getSession(),
-  );
+  const session = useSession();
   const [values, setValues] = useState<Values>({ actual: "", nueva: "", confirmacion: "" });
   const [errors, setErrors] = useState<Partial<Record<keyof Values, string>>>({});
   const [submitError, setSubmitError] = useState("");
@@ -41,7 +39,7 @@ export default function ChangePasswordForm() {
   const obligatorio = Boolean(session?.user.debe_cambiar_password);
 
   useEffect(() => {
-    if (!session) router.replace("/login");
+    if (session === null) router.replace("/login");
   }, [session, router]);
 
   const onChange = (field: keyof Values, value: string) => {
